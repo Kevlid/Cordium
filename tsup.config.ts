@@ -7,7 +7,7 @@ export default defineConfig([
         format: "cjs",
         outDir: "dist/cjs",
         dts: true,
-        clean: true, // Only clean once on the first build
+        clean: true,
         sourcemap: true,
         minify: false,
     },
@@ -17,7 +17,7 @@ export default defineConfig([
         format: "esm",
         outDir: "dist/esm",
         dts: true,
-        clean: false, // Don't clean again to avoid conflicts
+        clean: true,
         sourcemap: true,
         minify: false,
     },
