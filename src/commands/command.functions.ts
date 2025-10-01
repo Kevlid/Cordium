@@ -1,5 +1,5 @@
 import { PrefixCommand } from "./prefix.types";
-import { SlashCommand } from "./command.types";
+import { SlashCommand } from "./slash.types";
 
 export function createPrefixCommand(command: PrefixCommand): PrefixCommand {
     return command;
