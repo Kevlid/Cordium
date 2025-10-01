@@ -29,6 +29,12 @@ export class PluginManager {
             this.core.eventManager.registerGlobal(eventData);
         }
 
+        // Register commands
+        for (const command of plugin?.prefixCommands || []) {
+            const commandData = { ...command, pluginName: plugin.name };
+            this.core.commandManager.prefixHandler.registerGlobal(commandData);
+        }
+
         // Add the plugin to the map
         this.globalPlugins.set(plugin.name, plugin);
     }
@@ -45,6 +51,11 @@ export class PluginManager {
         // Load events
         for (const event of plugin?.events || []) {
             this.core.eventManager.loadGlobal(`${pluginName}:${event.name}`);
+        }
+
+        // Load commands
+        for (const command of plugin?.prefixCommands || []) {
+            this.core.commandManager.prefixHandler.loadGlobal(`${pluginName}:${command.name}`);
         }
 
         // Add the plugin to the set
@@ -65,6 +76,11 @@ export class PluginManager {
             this.core.eventManager.unloadGlobal(`${pluginName}:${event.name}`);
         }
 
+        // Unload commands
+        for (const command of plugin?.prefixCommands || []) {
+            this.core.commandManager.prefixHandler.unloadGlobal(`${pluginName}:${command.name}`);
+        }
+
         // Remove the plugin from the set
         this.loadedGlobalPlugins.delete(pluginName);
     }
@@ -78,6 +94,12 @@ export class PluginManager {
         for (const event of plugin?.events || []) {
             const eventData = { ...event, pluginName: plugin.name };
             this.core.eventManager.registerGuild(eventData);
+        }
+
+        // Register commands
+        for (const command of plugin?.prefixCommands || []) {
+            const commandData = { ...command, pluginName: plugin.name };
+            this.core.commandManager.prefixHandler.registerGuild(commandData);
         }
 
         // Add the plugin to the map
@@ -99,6 +121,11 @@ export class PluginManager {
             this.core.eventManager.loadGuild(guildId, `${pluginName}:${event.name}`);
         }
 
+        // Load commands
+        for (const command of plugin?.prefixCommands || []) {
+            this.core.commandManager.prefixHandler.loadGuild(guildId, `${pluginName}:${command.name}`);
+        }
+
         // Add the plugin to the set
         loadedPlugins.add(pluginName);
         this.loadedGuildPlugins.set(guildId, loadedPlugins);
@@ -117,6 +144,11 @@ export class PluginManager {
         // Unload events
         for (const event of plugin?.events || []) {
             this.core.eventManager.unloadGuild(guildId, `${pluginName}:${event.name}`);
+        }
+
+        // Unload commands
+        for (const command of plugin?.prefixCommands || []) {
+            this.core.commandManager.prefixHandler.unloadGuild(guildId, `${pluginName}:${command.name}`);
         }
 
         // Remove the plugin from the set

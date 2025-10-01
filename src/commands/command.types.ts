@@ -6,13 +6,6 @@ import {
     ChatInputCommandInteraction,
 } from "discord.js";
 
-export interface PrefixCommand {
-    name: string;
-    description?: string;
-    aliases?: string[];
-    execute: (pluginData: PluginData, commandData: any, ...args: any[]) => Promise<void> | void;
-}
-
 export interface SlashCommand {
     name: string;
     description?: string;

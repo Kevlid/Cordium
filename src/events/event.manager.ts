@@ -34,10 +34,11 @@ export class EventManager {
     }
 
     public registerGlobal(event: EventData): void {
-        if (this.globalEvents.has(event.name)) {
-            throw new Error(`Global event with name ${event.name} is already registered`);
+        const eventId = `${event.pluginName}:${event.name}`;
+        if (this.globalEvents.has(eventId)) {
+            throw new Error(`Global event with id ${eventId} is already registered`);
         }
-        this.globalEvents.set(`${event.pluginName}:${event.name}`, event);
+        this.globalEvents.set(eventId, event);
     }
 
     public loadGlobal(eventId: string): void {
@@ -63,10 +64,11 @@ export class EventManager {
     }
 
     public registerGuild(event: EventData): void {
-        if (this.guildEvents.has(event.name)) {
-            throw new Error(`Guild event with name ${event.name} is already registered`);
+        const eventId = `${event.pluginName}:${event.name}`;
+        if (this.guildEvents.has(eventId)) {
+            throw new Error(`Guild event with id ${eventId} is already registered`);
         }
-        this.guildEvents.set(`${event.pluginName}:${event.name}`, event);
+        this.guildEvents.set(eventId, event);
     }
 
     public loadGuild(guildId: string, eventId: string): void {
