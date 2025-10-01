@@ -84,7 +84,7 @@ export class PluginManager {
         this.guildPlugins.set(plugin.name, plugin);
     }
 
-    public loadGuild(pluginName: string, guildId: string): void {
+    public loadGuild(guildId: string, pluginName: string): void {
         const plugin = this.guildPlugins.get(pluginName);
         if (!plugin) {
             throw new Error(`Guild plugin with name ${pluginName} is not registered`);
@@ -104,7 +104,7 @@ export class PluginManager {
         this.loadedGuildPlugins.set(guildId, loadedPlugins);
     }
 
-    public unloadGuild(pluginName: string, guildId: string): void {
+    public unloadGuild(guildId: string, pluginName: string): void {
         const plugin = this.guildPlugins.get(pluginName);
         if (!plugin) {
             throw new Error(`Guild plugin with name ${pluginName} is not registered`);
