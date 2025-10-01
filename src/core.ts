@@ -29,5 +29,30 @@ export class Core {
 
         this.pluginManager = new PluginManager(this);
         this.eventManager = new EventManager(this);
+
+        // Register global plugins
+        for (const plugin of this.config.globalPlugins) {
+            this.pluginManager.registerGlobal(plugin);
+        }
+        // Register guild plugins
+        for (const plugin of this.config.guildPlugins) {
+            this.pluginManager.registerGuild(plugin);
+        }
+    }
+
+    public loadGlobalPlugin(pluginName: string): void {
+        return this.pluginManager.loadGlobal(pluginName);
+    }
+
+    public unloadGlobalPlugin(pluginName: string): void {
+        return this.pluginManager.unloadGlobal(pluginName);
+    }
+
+    public loadGuildPlugin(guildId: string, pluginName: string): void {
+        return this.pluginManager.loadGuild(guildId, pluginName);
+    }
+
+    public unloadGuildPlugin(guildId: string, pluginName: string): void {
+        return this.pluginManager.unloadGuild(guildId, pluginName);
     }
 }

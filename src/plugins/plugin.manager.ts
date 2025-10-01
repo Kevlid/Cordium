@@ -19,7 +19,7 @@ export class PluginManager {
         };
     }
 
-    public async registerGlobal(plugin: Plugin): Promise<void> {
+    public registerGlobal(plugin: Plugin): void {
         if (this.globalPlugins.has(plugin.name)) {
             throw new Error(`Global plugin with name ${plugin.name} is already registered`);
         }
@@ -33,7 +33,7 @@ export class PluginManager {
         this.globalPlugins.set(plugin.name, plugin);
     }
 
-    public async loadGlobal(pluginName: string): Promise<void> {
+    public loadGlobal(pluginName: string): void {
         const plugin = this.globalPlugins.get(pluginName);
         if (!plugin) {
             throw new Error(`Global plugin with name ${pluginName} is not registered`);
@@ -51,7 +51,7 @@ export class PluginManager {
         this.loadedGlobalPlugins.add(pluginName);
     }
 
-    public async unloadGlobal(pluginName: string): Promise<void> {
+    public unloadGlobal(pluginName: string): void {
         const plugin = this.globalPlugins.get(pluginName);
         if (!plugin) {
             throw new Error(`Global plugin with name ${pluginName} is not registered`);
@@ -69,7 +69,7 @@ export class PluginManager {
         this.loadedGlobalPlugins.delete(pluginName);
     }
 
-    public async registerGuild(plugin: Plugin): Promise<void> {
+    public registerGuild(plugin: Plugin): void {
         if (this.guildPlugins.has(plugin.name)) {
             throw new Error(`Guild plugin with name ${plugin.name} is already registered`);
         }
@@ -84,7 +84,7 @@ export class PluginManager {
         this.guildPlugins.set(plugin.name, plugin);
     }
 
-    public async loadGuild(pluginName: string, guildId: string): Promise<void> {
+    public loadGuild(pluginName: string, guildId: string): void {
         const plugin = this.guildPlugins.get(pluginName);
         if (!plugin) {
             throw new Error(`Guild plugin with name ${pluginName} is not registered`);
@@ -104,7 +104,7 @@ export class PluginManager {
         this.loadedGuildPlugins.set(guildId, loadedPlugins);
     }
 
-    public async unloadGuild(pluginName: string, guildId: string): Promise<void> {
+    public unloadGuild(pluginName: string, guildId: string): void {
         const plugin = this.guildPlugins.get(pluginName);
         if (!plugin) {
             throw new Error(`Guild plugin with name ${pluginName} is not registered`);
