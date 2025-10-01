@@ -31,11 +31,14 @@
         "dist"
     ],
     "devDependencies": {
-        "typescript": "^5.0.0",
-        "tsup": "^8.0.0"
+        "tsup": "^8.0.0",
+        "typescript": "^5.0.0"
     },
     "engines": {
         "node": ">=16"
     },
-    "packageManager": "pnpm@10.15.0"
+    "packageManager": "pnpm@10.15.0",
+    "dependencies": {
+        "discord.js": "^14.22.1"
+    }
 }

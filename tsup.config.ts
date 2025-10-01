@@ -1,24 +1,32 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig([
-    // CommonJS build
+    // CommonJS build - efficient and readable
     {
-        entry: ["src/index.ts"],
+        entry: ["src/**/*.ts"],
         format: "cjs",
         outDir: "dist/cjs",
         dts: true,
         clean: true,
         sourcemap: true,
-        minify: false,
+        minify: false, // Keep code readable
+        splitting: false, // Simpler output structure
+        treeshake: true,
+        target: "es2020",
+        keepNames: true,
     },
-    // ESM build
+    // ESM build - efficient and readable
     {
-        entry: ["src/index.ts"],
+        entry: ["src/**/*.ts"],
         format: "esm",
         outDir: "dist/esm",
         dts: true,
         clean: true,
         sourcemap: true,
-        minify: false,
+        minify: false, // Keep code readable
+        splitting: false, // Simpler output structure
+        treeshake: true,
+        target: "es2020",
+        keepNames: true,
     },
 ]);
