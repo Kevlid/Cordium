@@ -44,7 +44,7 @@ export class PluginManager {
 
         // Load events
         for (const event of plugin?.events || []) {
-            this.core.eventManager.loadGlobal(event.name);
+            this.core.eventManager.loadGlobal(`${pluginName}:${event.name}`);
         }
 
         // Add the plugin to the set
@@ -62,7 +62,7 @@ export class PluginManager {
 
         // Unload events
         for (const event of plugin?.events || []) {
-            this.core.eventManager.unloadGlobal(event.name);
+            this.core.eventManager.unloadGlobal(`${pluginName}:${event.name}`);
         }
 
         // Remove the plugin from the set
@@ -96,11 +96,31 @@ export class PluginManager {
 
         // Load events
         for (const event of plugin?.events || []) {
-            this.core.eventManager.loadGuild(guildId, event.name);
+            this.core.eventManager.loadGuild(guildId, `${pluginName}:${event.name}`);
         }
 
         // Add the plugin to the set
         loadedPlugins.add(pluginName);
+        this.loadedGuildPlugins.set(guildId, loadedPlugins);
+    }
+
+    public async unloadGuild(pluginName: string, guildId: string): Promise<void> {
+        const plugin = this.guildPlugins.get(pluginName);
+        if (!plugin) {
+            throw new Error(`Guild plugin with name ${pluginName} is not registered`);
+        }
+        const loadedPlugins = this.loadedGuildPlugins.get(guildId);
+        if (!loadedPlugins || !loadedPlugins.has(pluginName)) {
+            throw new Error(`Guild plugin with name ${pluginName} is not loaded in guild ${guildId}`);
+        }
+
+        // Unload events
+        for (const event of plugin?.events || []) {
+            this.core.eventManager.unloadGuild(guildId, `${pluginName}:${event.name}`);
+        }
+
+        // Remove the plugin from the set
+        loadedPlugins.delete(pluginName);
         this.loadedGuildPlugins.set(guildId, loadedPlugins);
     }
 }
