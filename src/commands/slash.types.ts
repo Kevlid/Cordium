@@ -1,26 +1,24 @@
 import { PluginData } from "../plugins/plugin.types";
 import {
     ApplicationCommandOptionType,
+    ApplicationIntegrationType,
     AutocompleteInteraction,
     ChannelType,
     ChatInputCommandInteraction,
+    InteractionContextType,
+    PermissionResolvable,
 } from "discord.js";
 
 export interface SlashCommand {
     name: string;
     description?: string;
-    options?: any[];
-    defaultmemberPermissions?: string;
-    autocomplete?: (
-        pluginData: PluginData,
-        commandData: any,
-        interaction: AutocompleteInteraction
-    ) => Promise<void> | void;
-    execute: (
-        pluginData: PluginData,
-        commandData: any,
-        interaction: ChatInputCommandInteraction
-    ) => Promise<void> | void;
+    options?: SlashCommandOption[];
+    defaultMemberPermissions?: bigint | null;
+    integrationTypes?: ApplicationIntegrationType[];
+    contexts: InteractionContextType[];
+    nsfw?: boolean;
+    autocomplete?: (pluginData: PluginData, interaction: AutocompleteInteraction) => Promise<void> | void;
+    execute: (pluginData: PluginData, interaction: ChatInputCommandInteraction) => Promise<void> | void;
 }
 
 export interface SlashCommandOption {

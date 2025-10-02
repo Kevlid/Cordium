@@ -1,3 +1,4 @@
+import { PermissionFlagsBits } from "discord.js";
 import { PrefixCommand } from "./prefix.types";
 import { SlashCommand } from "./slash.types";
 
