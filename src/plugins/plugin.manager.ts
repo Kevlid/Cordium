@@ -3,10 +3,7 @@ import { Plugin, PluginData } from "./plugin.types";
 
 export class PluginManager {
     private core: Core;
-    private globalPlugins = new Map<string, Plugin>();
-    private guildPlugins = new Map<string, Plugin>();
-    private loadedGlobalPlugins = new Set<string>();
-    private loadedGuildPlugins = new Map<string, Set<string>>();
+    private plugins = new Map<string, Plugin>();
 
     constructor(core: Core) {
         this.core = core;
@@ -19,140 +16,23 @@ export class PluginManager {
         };
     }
 
-    public registerGlobal(plugin: Plugin): void {
-        if (this.globalPlugins.has(plugin.name)) {
-            throw new Error(`Global plugin with name ${plugin.name} is already registered`);
+    public load(plugin: Plugin): void {
+        if (this.plugins.has(plugin.name)) {
+            throw new Error(`Plugin with name ${plugin.name} is already registered`);
         }
-        // Register events
+        // Load events
         for (const event of plugin?.events || []) {
             const eventData = { ...event, pluginName: plugin.name };
-            this.core.eventManager.registerGlobal(eventData);
+            this.core.eventManager.load(eventData);
         }
 
-        // Register commands
+        // Load prefix commands
         for (const command of plugin?.prefixCommands || []) {
             const commandData = { ...command, pluginName: plugin.name };
-            this.core.commandManager.prefixHandler.registerGlobal(commandData);
+            this.core.commandManager.prefixHandler.load(commandData);
         }
 
         // Add the plugin to the map
-        this.globalPlugins.set(plugin.name, plugin);
-    }
-
-    public loadGlobal(pluginName: string): void {
-        const plugin = this.globalPlugins.get(pluginName);
-        if (!plugin) {
-            throw new Error(`Global plugin with name ${pluginName} is not registered`);
-        }
-        if (this.loadedGlobalPlugins.has(pluginName)) {
-            throw new Error(`Global plugin with name ${pluginName} is already loaded`);
-        }
-
-        // Load events
-        for (const event of plugin?.events || []) {
-            this.core.eventManager.loadGlobal(`${pluginName}:${event.name}`);
-        }
-
-        // Load commands
-        for (const command of plugin?.prefixCommands || []) {
-            this.core.commandManager.prefixHandler.loadGlobal(`${pluginName}:${command.name}`);
-        }
-
-        // Add the plugin to the set
-        this.loadedGlobalPlugins.add(pluginName);
-    }
-
-    public unloadGlobal(pluginName: string): void {
-        const plugin = this.globalPlugins.get(pluginName);
-        if (!plugin) {
-            throw new Error(`Global plugin with name ${pluginName} is not registered`);
-        }
-        if (!this.loadedGlobalPlugins.has(pluginName)) {
-            throw new Error(`Global plugin with name ${pluginName} is not loaded`);
-        }
-
-        // Unload events
-        for (const event of plugin?.events || []) {
-            this.core.eventManager.unloadGlobal(`${pluginName}:${event.name}`);
-        }
-
-        // Unload commands
-        for (const command of plugin?.prefixCommands || []) {
-            this.core.commandManager.prefixHandler.unloadGlobal(`${pluginName}:${command.name}`);
-        }
-
-        // Remove the plugin from the set
-        this.loadedGlobalPlugins.delete(pluginName);
-    }
-
-    public registerGuild(plugin: Plugin): void {
-        if (this.guildPlugins.has(plugin.name)) {
-            throw new Error(`Guild plugin with name ${plugin.name} is already registered`);
-        }
-
-        // Register events
-        for (const event of plugin?.events || []) {
-            const eventData = { ...event, pluginName: plugin.name };
-            this.core.eventManager.registerGuild(eventData);
-        }
-
-        // Register commands
-        for (const command of plugin?.prefixCommands || []) {
-            const commandData = { ...command, pluginName: plugin.name };
-            this.core.commandManager.prefixHandler.registerGuild(commandData);
-        }
-
-        // Add the plugin to the map
-        this.guildPlugins.set(plugin.name, plugin);
-    }
-
-    public loadGuild(guildId: string, pluginName: string): void {
-        const plugin = this.guildPlugins.get(pluginName);
-        if (!plugin) {
-            throw new Error(`Guild plugin with name ${pluginName} is not registered`);
-        }
-        const loadedPlugins = this.loadedGuildPlugins.get(guildId) || new Set<string>();
-        if (loadedPlugins.has(pluginName)) {
-            throw new Error(`Guild plugin with name ${pluginName} is already loaded in guild ${guildId}`);
-        }
-
-        // Load events
-        for (const event of plugin?.events || []) {
-            this.core.eventManager.loadGuild(guildId, `${pluginName}:${event.name}`);
-        }
-
-        // Load commands
-        for (const command of plugin?.prefixCommands || []) {
-            this.core.commandManager.prefixHandler.loadGuild(guildId, `${pluginName}:${command.name}`);
-        }
-
-        // Add the plugin to the set
-        loadedPlugins.add(pluginName);
-        this.loadedGuildPlugins.set(guildId, loadedPlugins);
-    }
-
-    public unloadGuild(guildId: string, pluginName: string): void {
-        const plugin = this.guildPlugins.get(pluginName);
-        if (!plugin) {
-            throw new Error(`Guild plugin with name ${pluginName} is not registered`);
-        }
-        const loadedPlugins = this.loadedGuildPlugins.get(guildId);
-        if (!loadedPlugins || !loadedPlugins.has(pluginName)) {
-            throw new Error(`Guild plugin with name ${pluginName} is not loaded in guild ${guildId}`);
-        }
-
-        // Unload events
-        for (const event of plugin?.events || []) {
-            this.core.eventManager.unloadGuild(guildId, `${pluginName}:${event.name}`);
-        }
-
-        // Unload commands
-        for (const command of plugin?.prefixCommands || []) {
-            this.core.commandManager.prefixHandler.unloadGuild(guildId, `${pluginName}:${command.name}`);
-        }
-
-        // Remove the plugin from the set
-        loadedPlugins.delete(pluginName);
-        this.loadedGuildPlugins.set(guildId, loadedPlugins);
+        this.plugins.set(plugin.name, plugin);
     }
 }

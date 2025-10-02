@@ -1,10 +1,10 @@
 import { Plugin } from "./plugins/plugin.types";
 
 export interface CordiumOptions {
-    prefix: Array<string> | string;
-    owners: Array<string> | string;
-    globalPlugins: Array<Plugin>;
-    guildPlugins: Array<Plugin>;
+    prefix?: Array<string> | string;
+    owners?: Array<string> | string;
+    plugins?: Array<Plugin>;
+    isPluginEnabled?: (pluginName: string, guildId: string) => boolean | Promise<boolean>;
 }
 
 export interface Author {

@@ -17,8 +17,8 @@ export class Core {
         const defaultOptions: CordiumOptions = {
             prefix: "!",
             owners: [],
-            globalPlugins: [],
-            guildPlugins: [],
+            plugins: [],
+            isPluginEnabled: () => true,
         };
         config = { ...defaultOptions, ...config };
         if (typeof config.prefix === "string") {
@@ -33,29 +33,9 @@ export class Core {
         this.eventManager = new EventManager(this);
         this.commandManager = new CommandManager(this);
 
-        // Register global plugins
-        for (const plugin of this.config.globalPlugins) {
-            this.pluginManager.registerGlobal(plugin);
+        // Load plugins
+        for (const plugin of this.config.plugins || []) {
+            this.pluginManager.load(plugin);
         }
-        // Register guild plugins
-        for (const plugin of this.config.guildPlugins) {
-            this.pluginManager.registerGuild(plugin);
-        }
-    }
-
-    public loadGlobalPlugin(pluginName: string): void {
-        return this.pluginManager.loadGlobal(pluginName);
-    }
-
-    public unloadGlobalPlugin(pluginName: string): void {
-        return this.pluginManager.unloadGlobal(pluginName);
-    }
-
-    public loadGuildPlugin(guildId: string, pluginName: string): void {
-        return this.pluginManager.loadGuild(guildId, pluginName);
-    }
-
-    public unloadGuildPlugin(guildId: string, pluginName: string): void {
-        return this.pluginManager.unloadGuild(guildId, pluginName);
     }
 }
