@@ -1,14 +1,13 @@
 import { Events } from "discord.js";
-import { PluginData } from "../plugins/plugin.types";
+import { Plugin } from "../plugins/plugin.structure";
 
-export interface Event {
+export interface EventOptions {
     name: EventScopes;
     once?: boolean;
-    execute: (pluginData: PluginData, ...args: any[]) => Promise<void> | void;
 }
 
-export interface EventData extends Event {
-    pluginName: string;
+export interface EventBuildOptions {
+    plugin: Plugin;
 }
 
 export enum EventScopes {

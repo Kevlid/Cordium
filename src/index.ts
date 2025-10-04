@@ -1,21 +1,29 @@
 /**
  * Core & General
  */
+export { container } from "./container";
 export { Core as CordiumCore } from "./core";
-export { Author, CordiumOptions } from "./types";
+// export { CordiumOptions } from "./types";
 
 /**
  * Plugins
  */
-export { createPlugin } from "./plugins/plugin.functions";
+export { Plugin } from "./plugins/plugin.structure";
+export { pluginStore } from "./plugins/plugin.store";
+// export { PluginOptions } from "./plugins/plugin.types";
 
 /**
  * Events
  */
-export { createEvent } from "./events/event.functions";
+export { Event } from "./events/event.structure";
+export { eventStore } from "./events/event.store";
 export { EventScopes } from "./events/event.types";
 
 /**
  * Commands
  */
-export { createPrefixCommand } from "./commands/command.functions";
+
+/**
+ * Storage
+ */
+export { storage } from "./storage";
