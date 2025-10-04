@@ -1,13 +1,15 @@
 {
     "name": "cordium",
     "version": "0.0.0",
-    "description": "Discord Framework",
+    "description": "Framework for creating Discord applications",
     "author": "Kevlid",
     "license": "MIT",
     "keywords": [
         "typescript",
         "discord",
-        "framework"
+        "framework",
+        "commands",
+        "events"
     ],
     "scripts": {
         "build": "tsup",
