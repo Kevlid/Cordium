@@ -1,14 +1,15 @@
-import { EventBuildOptions, EventOptions, EventScopes } from "./event.types";
-import { eventStore } from "./event.store";
-import { Plugin } from "../plugins/plugin.structure";
+import type { Events } from "discord.js";
+import type { EventBuildOptions, EventOptions } from "./event.types";
+import type { Plugin } from "../plugins/plugin.structure";
+import { container } from "../container";
 
-export class Event {
+export abstract class Event {
     /**
      * Event name
-     * @type {EventScopes}
-     * @example "My Event"
+     * @type {Events | string}
+     * @example "messageCreate"
      */
-    public name: EventScopes;
+    public name: Events | string;
 
     /**
      * If the event should be executed only once
@@ -31,18 +32,21 @@ export class Event {
     }
 
     public load(): void {
-        if (eventStore.get(this.name)) {
+        if (container.eventStore.get((e: Event) => e.name === this.name)) {
             throw new Error(`Event with name ${this.name} already exists`);
         }
-        // Load the event
+        container.eventStore.add(this);
+        container.core.handler.addEventListener(this.name);
     }
 
     public unload(): void {
-        if (!eventStore.get(this.name)) {
+        if (!container.eventStore.get((e: Event) => e.name === this.name)) {
             throw new Error(`Event with name ${this.name} does not exist`);
         }
         // Unload the event
     }
+
+    public abstract run(...args: any[]): Promise<void> | void;
 }
 
 export namespace Event {
