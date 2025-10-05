@@ -6,9 +6,9 @@ import { Command } from "./commands/command.structure";
 export class Handler {
     constructor(handlerOptions: Handler.Options) {
         if (handlerOptions.loadMessageCommandListeners) {
-            container.client.on("messageCreate", (message) => this.onMessageCreate(message));
+            container.client.on("messageCreate", (message: Message) => this.onMessageCreate(message));
         }
-        container.client.on("interactionCreate", (interaction) => this.onInteractionCreate(interaction));
+        container.client.on("interactionCreate", (interaction: Interaction) => this.onInteractionCreate(interaction));
     }
 
     public async onEventTriggered(eventName: string, ...args: any[]): Promise<void> {
@@ -21,7 +21,7 @@ export class Handler {
     public addEventListener(eventName: string): void {
         const loadedEvents = container.store.get("loadedEvents") || new Set<string>();
         if (!loadedEvents.has(eventName)) {
-            container.client.on(eventName, (...args) => this.onEventTriggered(eventName, ...args));
+            container.client.on(eventName, (...args: any[]) => this.onEventTriggered(eventName, ...args));
         }
         loadedEvents.add(eventName);
         container.store.set("loadedEvents", loadedEvents);
