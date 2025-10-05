@@ -36,11 +36,24 @@ export class Handler {
         const [commandName, ...args] = message.content.slice(prefix.length).trim().split(/ +/g);
         if (!commandName) return;
 
-        const command = container.commandStore.get(
+        var command = container.commandStore.get(
             (cmd: Command) =>
                 cmd.name === commandName || (Array.isArray(cmd.aliases) && cmd.aliases.includes(commandName))
         );
         if (!command) return;
+
+        // Check for subcommand
+        const subcommandName = commandName + " " + (args[0] || "");
+        if (subcommandName) {
+            const subcommand = container.commandStore.get(
+                (cmd: Command) =>
+                    cmd.name === subcommandName || (Array.isArray(cmd.aliases) && cmd.aliases.includes(subcommandName))
+            );
+            if (subcommand && subcommand.runMessage) {
+                command = subcommand;
+            }
+        }
+
         if (command.runMessage) {
             await command.runMessage(message, ...args);
         }
