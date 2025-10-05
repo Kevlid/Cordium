@@ -54,7 +54,7 @@ client.login("YOUR_BOT_TOKEN");
 ## 📁 Project Structure
 
 ```
-your-bot/
+your-project/
 ├── plugins/
 │   ├── moderation/
 │   │   ├── plugin.ts
