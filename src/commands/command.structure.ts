@@ -26,10 +26,17 @@ export abstract class Command {
      */
     public plugin: Plugin;
 
+    /**
+     * A array of application commands
+     * @type {string[]}
+     */
+    public applicationCommands: Array<string>;
+
     constructor(buildOptions: Command.BuildOptions, options: Command.Options) {
         this.name = options.name;
         this.aliases = options.aliases || [];
         this.plugin = buildOptions.plugin;
+        this.applicationCommands = new Array<string>();
     }
 
     public load(): void {
@@ -42,8 +49,14 @@ export abstract class Command {
             const builder = this.build(new CommandBuilder());
             const slashCommandBuilders = builder.getSlashCommands();
             const contextMenuBuilders = builder.getContextMenuCommands();
-            slashCommandBuilders.forEach((b) => container.commandBuilderStore.add(b));
-            contextMenuBuilders.forEach((b) => container.commandBuilderStore.add(b));
+            slashCommandBuilders.forEach((b) => {
+                container.commandBuilderStore.add(b);
+                this.applicationCommands.push(b.name);
+            });
+            contextMenuBuilders.forEach((b) => {
+                container.commandBuilderStore.add(b);
+                this.applicationCommands.push(b.name);
+            });
         }
     }
 

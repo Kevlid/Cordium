@@ -63,7 +63,20 @@ export class Handler {
         if (!interaction.isChatInputCommand() && !interaction.isContextMenuCommand()) return;
 
         if (interaction.isChatInputCommand()) {
+            const commandName = interaction.commandName;
+            var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
+            console.log(command);
+            if (!command) return;
+            if (command.runChatInput) {
+                await command.runChatInput(interaction);
+            }
         } else if (interaction.isContextMenuCommand()) {
+            const commandName = interaction.commandName;
+            var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
+            if (!command) return;
+            if (command.runContextMenu) {
+                await command.runContextMenu(interaction);
+            }
         }
     }
 }
