@@ -47,6 +47,7 @@ const core = new CordiumCore(client, {
     owners: ["YOUR_USER_ID"],
     autoRegisterCommands: true,
 });
+core.init();
 
 client.login("YOUR_BOT_TOKEN");
 ```
