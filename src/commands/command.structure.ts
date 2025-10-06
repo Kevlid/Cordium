@@ -13,6 +13,14 @@ export abstract class Command {
     public name: string;
 
     /**
+     * Description of the command
+     * @type {string}
+     * @example "Ban a user from the server"
+     * @default "No description provided"
+     */
+    public description: string;
+
+    /**
      * Aliases for the command
      * @type {Array<string>}
      * @example ["b", "banish"]
@@ -32,9 +40,17 @@ export abstract class Command {
      */
     public applicationCommands: Array<string>;
 
+    /**
+     * Custom values for the command
+     * @type {Record<string, any>}
+     */
+    public customValues?: Record<string, any>;
+
     constructor(buildOptions: Command.BuildOptions, options: Command.Options) {
         this.name = options.name;
+        this.description = options.description || "No description provided";
         this.aliases = options.aliases || [];
+        this.customValues = options.values;
         this.plugin = buildOptions.plugin;
         this.applicationCommands = new Array<string>();
     }
