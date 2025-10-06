@@ -114,10 +114,9 @@ export class Handler {
 
     public async loadPlugin(pluginPath: string): Promise<void> {
         try {
-            const pluginUrl = pathToFileURL(pluginPath).href;
+            const pluginUrl = pathToFileURL(path.resolve(pluginPath)).href;
             const imported = await import(pluginUrl);
-            const PluginClass = imported.default;
-            const ExportedPlugin = PluginClass || Object.values(imported)[0];
+            const ExportedPlugin = imported.default || Object.values(imported)[0];
 
             if (!ExportedPlugin || typeof ExportedPlugin !== "function") {
                 throw new Error(`No valid plugin class found in ${pluginPath}`);
