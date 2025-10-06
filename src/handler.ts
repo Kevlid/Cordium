@@ -3,6 +3,7 @@ import { container } from "./container";
 import { Plugin } from "./plugins/plugin.structure";
 import { Event } from "./events/event.structure";
 import { Command } from "./commands/command.structure";
+import { pathToFileURL } from "url";
 import path from "path";
 import fs from "fs";
 
@@ -113,7 +114,8 @@ export class Handler {
 
     public async loadPlugin(pluginPath: string): Promise<void> {
         try {
-            const imported = await import(pluginPath);
+            const pluginUrl = pathToFileURL(pluginPath).href;
+            const imported = await import(pluginUrl);
             const PluginClass = imported.default;
             const ExportedPlugin = PluginClass || Object.values(imported)[0];
 
