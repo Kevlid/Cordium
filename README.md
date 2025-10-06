@@ -62,7 +62,7 @@ your-project/
 │   │   │   ├── ban.command.ts
 │   │   │   └── kick.command.ts
 │   │   └── events/
-│   │       └── memberJoin.event.ts
+│   │       └── clientReady.event.ts
 │   └── music/
 │       ├── plugin.ts
 │       └── commands/
@@ -80,11 +80,10 @@ your-project/
 // plugins/example/plugin.ts
 import { Plugin } from "cordium";
 
-export default class ExamplePlugin extends Plugin {
+export class ModerationPlugin extends Plugin {
     constructor(buildOptions: Plugin.BuildOptions) {
         super(buildOptions, {
-            name: "Example Plugin",
-            description: "An example plugin for Cordium",
+            name: "Moderation",
         });
     }
 }
@@ -97,7 +96,7 @@ export default class ExamplePlugin extends Plugin {
 import { Command, CommandBuilder } from "cordium";
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 
-export default class HelloCommand extends Command {
+export class HelloCommand extends Command {
     constructor(buildOptions: Command.BuildOptions) {
         super(buildOptions, {
             name: "hello",
@@ -137,7 +136,7 @@ export default class HelloCommand extends Command {
 import { Event } from "cordium";
 import { Events } from "discord.js";
 
-export default class ReadyEvent extends Event {
+export class ClientReadyEvent extends Event {
     constructor(buildOptions: Event.BuildOptions) {
         super(buildOptions, {
             name: Events.ClientReady,
