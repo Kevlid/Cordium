@@ -2,6 +2,7 @@ import type { PluginBuildOptions, PluginOptions } from "./plugin.types";
 import { Event } from "../events/event.structure";
 import { Command } from "../commands/command.structure";
 import { container } from "../container";
+import { pathToFileURL } from "url";
 import path from "path";
 import fs from "fs";
 
@@ -56,7 +57,7 @@ export class Plugin {
         this.commandPath = fs.existsSync(commandDir) ? commandDir : null;
     }
 
-    public load(): void {
+    public async load(): Promise<void> {
         if (container.pluginStore.get((p: Plugin) => p.name === this.name)) {
             throw new Error(`Plugin with name ${this.name} already exists`);
         }
@@ -65,13 +66,24 @@ export class Plugin {
         if (this.eventPath) {
             const eventFiles = this.scanDirectory(this.eventPath, ".event");
             for (const file of eventFiles) {
-                const { default: EventClass, ...namedExports } = require(file);
-                const ExportedEvent = EventClass || Object.values(namedExports)[0];
-                if (!ExportedEvent || typeof ExportedEvent !== "function") {
+                let imported;
+                try {
+                    const eventUrl = pathToFileURL(path.resolve(file)).href;
+                    imported = await import(eventUrl);
+                } catch (err) {
+                    imported = require(path.resolve(file));
+                }
+                const ExportedEvent = imported.default || Object.values(imported)[0];
+                const EventClass =
+                    typeof ExportedEvent === "function"
+                        ? ExportedEvent
+                        : Object.values(imported).find((v) => typeof v === "function" && v.prototype instanceof Event);
+
+                if (!EventClass) {
                     throw new Error(`No valid event class found in ${file}`);
                 }
 
-                const instance = new ExportedEvent({ plugin: this });
+                const instance = new EventClass({ plugin: this });
                 if (!(instance instanceof Event)) {
                     throw new Error(`Event ${file} does not extend the Event class`);
                 }
@@ -84,12 +96,24 @@ export class Plugin {
         if (this.commandPath) {
             const commandFiles = this.scanDirectory(this.commandPath, ".command");
             for (const file of commandFiles) {
-                const { default: CommandClass, ...namedExports } = require(file);
-                const ExportedCommand = CommandClass || Object.values(namedExports)[0];
-                if (!ExportedCommand || typeof ExportedCommand !== "function") {
+                let imported;
+                try {
+                    const commandUrl = pathToFileURL(path.resolve(file)).href;
+                    imported = await import(commandUrl);
+                } catch (err) {
+                    imported = require(path.resolve(file));
+                }
+                const ExportedCommand = imported.default || Object.values(imported)[0];
+                const CommandClass =
+                    typeof ExportedCommand === "function"
+                        ? ExportedCommand
+                        : Object.values(imported).find(
+                              (v) => typeof v === "function" && v.prototype instanceof Command
+                          );
+                if (!CommandClass) {
                     throw new Error(`No valid command class found in ${file}`);
                 }
-                const instance = new ExportedCommand({ plugin: this });
+                const instance = new CommandClass({ plugin: this });
                 if (!(instance instanceof Command)) {
                     throw new Error(`Command ${file} does not extend the Command class`);
                 }

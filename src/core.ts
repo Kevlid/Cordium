@@ -29,6 +29,13 @@ export class Core {
      */
     public owners: Array<string>;
 
+    /**
+     * If the Discord application Commands should be automatically registered
+     * @type {boolean}
+     * @example true
+     */
+    public autoRegisterCommands: boolean;
+
     constructor(client: Client, config: CordiumOptions) {
         container.core = this;
         container.client = client;
@@ -54,11 +61,14 @@ export class Core {
         this.client = client;
         this.prefixes = config.prefix || [];
         this.owners = config.owners || [];
+        this.autoRegisterCommands = config.autoRegisterCommands || false;
         container.store.set("baseDirectory", config.baseDirectory);
         container.store.set("pluginDirectory", path.join(config.baseDirectory, "plugins"));
+    }
 
+    public init(): void {
         this.handler.loadPlugins();
-        if (config.autoRegisterCommands) {
+        if (this.autoRegisterCommands) {
             this.handler.registerCommands();
             this.handler.unregisterCommands();
         }

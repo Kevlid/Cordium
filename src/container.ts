@@ -15,4 +15,13 @@ export class Container {
     public commandBuilderStore = new StoreSet<SlashCommandBuilder | ContextMenuCommandBuilder>();
 }
 
-export const container = new Container();
+const CONTAINER_KEY = Symbol.for("cordium.container");
+function getContainer(): Container {
+    const globalThis = global as any;
+    if (!globalThis[CONTAINER_KEY]) {
+        globalThis[CONTAINER_KEY] = new Container();
+    }
+    return globalThis[CONTAINER_KEY];
+}
+
+export const container = getContainer();

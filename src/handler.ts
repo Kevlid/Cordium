@@ -114,21 +114,28 @@ export class Handler {
 
     public async loadPlugin(pluginPath: string): Promise<void> {
         try {
-            const pluginUrl = pathToFileURL(path.resolve(pluginPath)).href;
-            const imported = await import(pluginUrl);
+            let imported;
+            try {
+                const pluginUrl = pathToFileURL(path.resolve(pluginPath)).href;
+                imported = await import(pluginUrl);
+            } catch (err) {
+                imported = require(path.resolve(pluginPath));
+            }
             const ExportedPlugin = imported.default || Object.values(imported)[0];
 
-            if (!ExportedPlugin || typeof ExportedPlugin !== "function") {
+            const PluginClass =
+                typeof ExportedPlugin === "function"
+                    ? ExportedPlugin
+                    : Object.values(ExportedPlugin).find(
+                          (v) => typeof v === "function" && v.prototype instanceof Plugin
+                      );
+
+            if (!PluginClass) {
                 throw new Error(`No valid plugin class found in ${pluginPath}`);
             }
 
             const directoryPath = path.dirname(pluginPath);
-            const instance = new ExportedPlugin({ directoryPath });
-
-            if (!(instance instanceof Plugin)) {
-                throw new Error(`Plugin ${pluginPath} does not extend the Plugin class`);
-            }
-
+            const instance = new PluginClass({ directoryPath });
             await instance.load();
         } catch (error) {
             console.error(`Failed to load plugin at ${pluginPath}:`, error);
