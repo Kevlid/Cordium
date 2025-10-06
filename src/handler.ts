@@ -113,8 +113,9 @@ export class Handler {
 
     public async loadPlugin(pluginPath: string): Promise<void> {
         try {
-            const { default: PluginClass, ...namedExports } = require(pluginPath);
-            const ExportedPlugin = PluginClass || Object.values(namedExports)[0];
+            const imported = await import(pluginPath);
+            const PluginClass = imported.default;
+            const ExportedPlugin = PluginClass || Object.values(imported)[0];
 
             if (!ExportedPlugin || typeof ExportedPlugin !== "function") {
                 throw new Error(`No valid plugin class found in ${pluginPath}`);
