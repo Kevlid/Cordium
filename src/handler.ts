@@ -70,6 +70,12 @@ export class Handler {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
+            if (container.core.beforeCommandRun) {
+                const status = await container.core.beforeCommandRun(command.name, interaction.guildId || undefined);
+                if (status === false) {
+                    return;
+                }
+            }
             if (command.runChatInput) {
                 await command.runChatInput(interaction);
             }
@@ -77,6 +83,12 @@ export class Handler {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
+            if (container.core.beforeCommandRun) {
+                const status = await container.core.beforeCommandRun(command.name, interaction.guildId || undefined);
+                if (status === false) {
+                    return;
+                }
+            }
             if (command.runContextMenu) {
                 await command.runContextMenu(interaction);
             }

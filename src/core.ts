@@ -1,9 +1,7 @@
 import { Client } from "discord.js";
 import { Handler } from "./handler";
 import { container } from "./container";
-import { Plugin } from "./plugins/plugin.structure";
 import path from "path";
-import fs from "fs";
 
 export class Core {
     /**
@@ -36,6 +34,18 @@ export class Core {
      */
     public autoRegisterCommands: boolean;
 
+    /**
+     * Checks if a plugin is enabled in a guild.
+     * @type {Function}
+     */
+    public isPluginEnabled: Function;
+
+    /**
+     * Run function before a command is executed
+     * @type {Function}
+     */
+    public beforeCommandRun: Function;
+
     constructor(client: Client, config: CordiumOptions) {
         container.core = this;
         container.client = client;
@@ -57,11 +67,12 @@ export class Core {
         if (typeof config.owners === "string") {
             config.owners = [config.owners];
         }
-
         this.client = client;
         this.prefixes = config.prefix || [];
         this.owners = config.owners || [];
         this.autoRegisterCommands = config.autoRegisterCommands || false;
+        this.isPluginEnabled = config.isPluginEnabled || (() => true);
+        this.beforeCommandRun = config.beforeCommandRun || (() => {});
         container.store.set("baseDirectory", config.baseDirectory);
         container.store.set("pluginDirectory", path.join(config.baseDirectory, "plugins"));
     }
@@ -81,6 +92,7 @@ export interface CordiumOptions {
     owners?: Array<string> | string;
     autoRegisterCommands?: boolean;
     isPluginEnabled?: (pluginName: string, guildId: string) => boolean | Promise<boolean>;
+    beforeCommandRun?: (commandName: string, guildId?: string) => void | Promise<void>;
 }
 
 export namespace Core {
