@@ -54,7 +54,7 @@ export class Handler {
                 (cmd: Command) =>
                     cmd.name === subcommandName || (Array.isArray(cmd.aliases) && cmd.aliases.includes(subcommandName))
             );
-            if (subcommand && subcommand.runMessage) {
+            if (subcommand && subcommand.onMessage) {
                 command = subcommand;
             }
         }
@@ -75,15 +75,13 @@ export class Handler {
             }
         }
 
-        if (command.runMessage) {
-            await command.runMessage(message, ...args);
+        if (command.onMessage) {
+            await command.onMessage(message, ...args);
         }
     }
 
     public async onInteractionCreate(interaction: Interaction): Promise<void> {
-        if (!interaction.isChatInputCommand() && !interaction.isContextMenuCommand()) return;
-
-        if (interaction.isChatInputCommand()) {
+        if (interaction.isAutocomplete()) {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
@@ -102,8 +100,27 @@ export class Handler {
                     return;
                 }
             }
-            if (command.runChatInput) {
-                await command.runChatInput(interaction);
+        } else if (interaction.isChatInputCommand()) {
+            const commandName = interaction.commandName;
+            var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
+            if (!command) return;
+            if (container.core.beforeCommandRun) {
+                const context: Core.Context = {
+                    command: command,
+                    guild: interaction.guild || null,
+                    member: (interaction.member as GuildMember) || null,
+                    user: interaction.user || null,
+                    channel: interaction.channel || null,
+                    message: null,
+                    interaction: interaction || null,
+                };
+                const status = await container.core.beforeCommandRun(context);
+                if (status === false) {
+                    return;
+                }
+            }
+            if (command.onChatInput) {
+                await command.onChatInput(interaction);
             }
         } else if (interaction.isContextMenuCommand()) {
             const commandName = interaction.commandName;
@@ -124,8 +141,8 @@ export class Handler {
                     return;
                 }
             }
-            if (command.runContextMenu) {
-                await command.runContextMenu(interaction);
+            if (command.onContextMenu) {
+                await command.onContextMenu(interaction);
             }
         }
     }

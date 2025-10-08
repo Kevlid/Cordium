@@ -1,5 +1,10 @@
 import type { Plugin } from "../plugins/plugin.structure";
-import type { ChatInputCommandInteraction, ContextMenuCommandInteraction, Message } from "discord.js";
+import type {
+    AutocompleteInteraction,
+    ChatInputCommandInteraction,
+    ContextMenuCommandInteraction,
+    Message,
+} from "discord.js";
 import type { CommandOptions, CommandBuildOptions } from "./command.types";
 import { CommandBuilder } from "./command.builder";
 import { container } from "../container";
@@ -61,8 +66,8 @@ export abstract class Command {
         }
         container.commandStore.add(this);
 
-        if (this.build) {
-            const builder = this.build(new CommandBuilder());
+        if (this.buildApplicationCommands) {
+            const builder = this.buildApplicationCommands(new CommandBuilder());
             const slashCommandBuilders = builder.getSlashCommands();
             const contextMenuBuilders = builder.getContextMenuCommands();
             slashCommandBuilders.forEach((b) => {
@@ -78,10 +83,11 @@ export abstract class Command {
 
     public unload(): void {}
 
-    public build?(builder: CommandBuilder): CommandBuilder;
-    public runChatInput?(interaction: ChatInputCommandInteraction): Promise<void> | void;
-    public runContextMenu?(interaction: ContextMenuCommandInteraction): Promise<void> | void;
-    public runMessage?(message: Message, ...args: any[]): Promise<void> | void;
+    public buildApplicationCommands?(builder: CommandBuilder): CommandBuilder;
+    public onAutocomplete?(interaction: AutocompleteInteraction): Promise<void> | void;
+    public onChatInput?(interaction: ChatInputCommandInteraction): Promise<void> | void;
+    public onContextMenu?(interaction: ContextMenuCommandInteraction): Promise<void> | void;
+    public onMessage?(message: Message, ...args: any[]): Promise<void> | void;
 }
 
 export namespace Command {
