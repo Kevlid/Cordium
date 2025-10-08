@@ -93,7 +93,7 @@ export interface CordiumOptions {
     owners?: Array<string> | string;
     autoRegisterCommands?: boolean;
     isPluginEnabled?: (pluginName: string, guildId: string) => boolean | Promise<boolean>;
-    beforeCommandRun?: (context: Core.Context) => void | Promise<void>;
+    beforeCommandRun?: (context: Core.Context) => boolean | Promise<boolean>;
 }
 
 export interface CoreContext {
