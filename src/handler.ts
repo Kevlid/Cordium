@@ -100,6 +100,9 @@ export class Handler {
                     return;
                 }
             }
+            if (command.onAutocomplete) {
+                await command.onAutocomplete(interaction);
+            }
         } else if (interaction.isChatInputCommand()) {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));

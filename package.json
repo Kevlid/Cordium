@@ -1,6 +1,6 @@
 {
     "name": "cordium",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "description": "Framework for creating Discord applications",
     "author": "Kevlid",
     "license": "MIT",
