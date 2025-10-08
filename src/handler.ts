@@ -214,10 +214,10 @@ export class Handler {
     }
 
     public async registerCommands(guildId?: string): Promise<void> {
-        const commandBuilders = Array.from(container.commandBuilderStore);
         if (!container.client.isReady()) {
             await new Promise<void>((resolve) => container.client.once("clientReady", () => resolve()));
         }
+        const commandBuilders = Array.from(container.commandBuilderStore);
 
         if (guildId && container.client.guilds.cache.get(guildId)) {
             container.client.guilds.cache.get(guildId)?.commands.set(commandBuilders);
@@ -227,14 +227,14 @@ export class Handler {
     }
 
     public async unregisterCommands(guildId?: string): Promise<void> {
+        if (!container.client.isReady()) {
+            await new Promise<void>((resolve) => container.client.once("clientReady", () => resolve()));
+        }
         const loadedCommandNames = new Set(
             Array.from(container.commandStore, (cmd: Command) =>
                 Array.isArray(cmd.applicationCommands) ? cmd.applicationCommands : []
             ).flat()
         );
-        if (!container.client.isReady()) {
-            await new Promise<void>((resolve) => container.client.once("clientReady", () => resolve()));
-        }
 
         if (guildId) {
             const guild = container.client.guilds.cache.get(guildId);
@@ -248,6 +248,19 @@ export class Handler {
             await Promise.allSettled(
                 toDelete.map((cmd: ApplicationCommand) => container.client.application!.commands.delete(cmd.id))
             );
+        }
+    }
+
+    public async unregisterAllCommands(guildId?: string): Promise<void> {
+        if (!container.client.isReady()) {
+            await new Promise<void>((resolve) => container.client.once("clientReady", () => resolve()));
+        }
+        if (guildId) {
+            const guild = container.client.guilds.cache.get(guildId);
+            if (!guild) return;
+            await guild.commands.set([]);
+        } else if (container.client.application) {
+            await container.client.application.commands.set([]);
         }
     }
 }

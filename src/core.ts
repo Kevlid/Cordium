@@ -57,9 +57,6 @@ export class Core {
 
         const defaultOptions = {
             prefix: "!",
-            owners: [],
-            isPluginEnabled: () => true,
-            autoRegisterCommands: false,
         };
         config = { ...defaultOptions, ...config };
         if (typeof config.prefix === "string") {
@@ -72,16 +69,18 @@ export class Core {
         this.prefixes = config.prefix || [];
         this.owners = config.owners || [];
         this.autoRegisterCommands = config.autoRegisterCommands || false;
+        container.store.set("applicationCommandGuildId", config.applicationCommandGuildId || null);
         this.isPluginEnabled = config.isPluginEnabled || null;
         this.beforeCommandRun = config.beforeCommandRun || null;
         container.store.set("baseDirectory", config.baseDirectory);
         container.store.set("pluginDirectory", path.join(config.baseDirectory, "plugins"));
     }
 
-    public init(): void {
-        this.handler.loadPlugins();
+    public async init(): Promise<void> {
+        await this.handler.loadPlugins();
         if (this.autoRegisterCommands) {
-            this.handler.registerCommands();
+            const gid = container.store.get("applicationCommandGuildId") || null;
+            this.handler.registerCommands(gid);
             this.handler.unregisterCommands();
         }
     }
@@ -92,6 +91,7 @@ export interface CordiumOptions {
     prefix?: Array<string> | string;
     owners?: Array<string> | string;
     autoRegisterCommands?: boolean;
+    applicationCommandGuildId?: string;
     isPluginEnabled?: (pluginName: string, guildId: string) => boolean | Promise<boolean>;
     beforeCommandRun?: (context: Core.Context) => boolean | Promise<boolean>;
 }
