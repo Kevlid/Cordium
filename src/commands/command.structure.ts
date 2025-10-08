@@ -44,13 +44,13 @@ export abstract class Command {
      * Custom values for the command
      * @type {Record<string, any>}
      */
-    public customValues?: Record<string, any>;
+    public values?: Record<string, any>;
 
     constructor(buildOptions: Command.BuildOptions, options: Command.Options) {
         this.name = options.name;
         this.description = options.description || "No description provided";
         this.aliases = options.aliases || [];
-        this.customValues = options.values;
+        this.values = options.values;
         this.plugin = buildOptions.plugin;
         this.applicationCommands = new Array<string>();
     }
