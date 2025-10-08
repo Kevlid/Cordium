@@ -88,12 +88,6 @@ export class Handler {
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
             if (container.core.beforeCommandRun) {
-                const status = await container.core.beforeCommandRun(command.name, interaction.guildId || undefined);
-                if (status === false) {
-                    return;
-                }
-            }
-            if (container.core.beforeCommandRun) {
                 const context: Core.Context = {
                     command: command,
                     guild: interaction.guild || null,
@@ -115,12 +109,6 @@ export class Handler {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
-            if (container.core.beforeCommandRun) {
-                const status = await container.core.beforeCommandRun(command.name, interaction.guildId || undefined);
-                if (status === false) {
-                    return;
-                }
-            }
             if (container.core.beforeCommandRun) {
                 const context: Core.Context = {
                     command: command,

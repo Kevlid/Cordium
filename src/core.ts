@@ -39,13 +39,13 @@ export class Core {
      * Checks if a plugin is enabled in a guild.
      * @type {Function}
      */
-    public isPluginEnabled: Function;
+    public isPluginEnabled: Function | null;
 
     /**
      * Run function before a command is executed
      * @type {Function}
      */
-    public beforeCommandRun: Function;
+    public beforeCommandRun: Function | null;
 
     constructor(client: Client, config: CordiumOptions) {
         container.core = this;
@@ -72,8 +72,8 @@ export class Core {
         this.prefixes = config.prefix || [];
         this.owners = config.owners || [];
         this.autoRegisterCommands = config.autoRegisterCommands || false;
-        this.isPluginEnabled = config.isPluginEnabled || (() => true);
-        this.beforeCommandRun = config.beforeCommandRun || (() => {});
+        this.isPluginEnabled = config.isPluginEnabled || null;
+        this.beforeCommandRun = config.beforeCommandRun || null;
         container.store.set("baseDirectory", config.baseDirectory);
         container.store.set("pluginDirectory", path.join(config.baseDirectory, "plugins"));
     }
