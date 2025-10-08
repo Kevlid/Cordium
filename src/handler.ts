@@ -1,4 +1,5 @@
-import { ApplicationCommand, Interaction, Message } from "discord.js";
+import { ApplicationCommand, GuildMember, Interaction, Message } from "discord.js";
+import type { Core } from "./core";
 import { container } from "./container";
 import { Plugin } from "./plugins/plugin.structure";
 import { Event } from "./events/event.structure";
@@ -58,6 +59,22 @@ export class Handler {
             }
         }
 
+        if (container.core.beforeCommandRun) {
+            const context: Core.Context = {
+                command: command,
+                guild: message.guild || null,
+                member: message.member || null,
+                user: message.author || null,
+                channel: message.channel || null,
+                message: message || null,
+                interaction: null,
+            };
+            const status = await container.core.beforeCommandRun(context);
+            if (status === false) {
+                return;
+            }
+        }
+
         if (command.runMessage) {
             await command.runMessage(message, ...args);
         }
@@ -76,6 +93,21 @@ export class Handler {
                     return;
                 }
             }
+            if (container.core.beforeCommandRun) {
+                const context: Core.Context = {
+                    command: command,
+                    guild: interaction.guild || null,
+                    member: (interaction.member as GuildMember) || null,
+                    user: interaction.user || null,
+                    channel: interaction.channel || null,
+                    message: null,
+                    interaction: interaction || null,
+                };
+                const status = await container.core.beforeCommandRun(context);
+                if (status === false) {
+                    return;
+                }
+            }
             if (command.runChatInput) {
                 await command.runChatInput(interaction);
             }
@@ -85,6 +117,21 @@ export class Handler {
             if (!command) return;
             if (container.core.beforeCommandRun) {
                 const status = await container.core.beforeCommandRun(command.name, interaction.guildId || undefined);
+                if (status === false) {
+                    return;
+                }
+            }
+            if (container.core.beforeCommandRun) {
+                const context: Core.Context = {
+                    command: command,
+                    guild: interaction.guild || null,
+                    member: (interaction.member as GuildMember) || null,
+                    user: interaction.user || null,
+                    channel: interaction.channel || null,
+                    message: null,
+                    interaction: interaction || null,
+                };
+                const status = await container.core.beforeCommandRun(context);
                 if (status === false) {
                     return;
                 }

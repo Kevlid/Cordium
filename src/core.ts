@@ -1,6 +1,7 @@
-import { Client } from "discord.js";
+import { Channel, Client, Guild, GuildMember, Interaction, Message, User } from "discord.js";
 import { Handler } from "./handler";
 import { container } from "./container";
+import type { Command } from "./commands/command.structure";
 import path from "path";
 
 export class Core {
@@ -92,9 +93,20 @@ export interface CordiumOptions {
     owners?: Array<string> | string;
     autoRegisterCommands?: boolean;
     isPluginEnabled?: (pluginName: string, guildId: string) => boolean | Promise<boolean>;
-    beforeCommandRun?: (commandName: string, guildId?: string) => void | Promise<void>;
+    beforeCommandRun?: (context: Core.Context) => void | Promise<void>;
+}
+
+export interface CoreContext {
+    command?: Command;
+    guild?: Guild | null;
+    member?: GuildMember | null;
+    user?: User | null;
+    channel?: Channel | null;
+    message?: Message | null;
+    interaction?: Interaction | null;
 }
 
 export namespace Core {
     export type Options = CordiumOptions;
+    export type Context = CoreContext;
 }
