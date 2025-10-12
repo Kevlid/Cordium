@@ -21,21 +21,23 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+          always-auth: true
+          auth-type: 'oidc'
           
       - run: npm install -g pnpm
         
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         
-      #- name: Set version from release
-      #  run: |
-      #    VERSION=${GITHUB_REF#refs/tags/}
-      #    VERSION=${VERSION#v}
-      #    echo "Setting package version to $VERSION"
-      #    pnpm version $VERSION --no-git-tag-version
+      - name: Set version from release
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "Setting package version to $VERSION"
+          pnpm version $VERSION --no-git-tag-version
         
       - name: Build
         run: pnpm build
 
       - name: Publish to npm
-        run: pnpm publish --no-git-checks
+        run: pnpm publish --no-git-checks --access public
