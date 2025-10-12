@@ -32,16 +32,16 @@ export abstract class Event {
     }
 
     public load(): void {
-        if (container.eventStore.get((e: Event) => e.name === this.name)) {
-            throw new Error(`Event with name ${this.name} already exists`);
+        if (container.eventStore.get((e: Event) => e.name === this.name && e.plugin.name === this.plugin.name)) {
+            throw new Error(`Event with name ${this.name} already exists in plugin ${this.plugin.name}`);
         }
         container.eventStore.add(this);
         container.core.handler.addEventListener(this.name);
     }
 
     public unload(): void {
-        if (!container.eventStore.get((e: Event) => e.name === this.name)) {
-            throw new Error(`Event with name ${this.name} does not exist`);
+        if (!container.eventStore.get((e: Event) => e.name === this.name && e.plugin.name === this.plugin.name)) {
+            throw new Error(`Event with name ${this.name} does not exist in plugin ${this.plugin.name}`);
         }
         // Unload the event
     }
