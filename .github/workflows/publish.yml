@@ -2,45 +2,47 @@ name: Build and Publish on Release
 
 on:
   release:
-    types: 
-      - published
+    types: [published]
 
 permissions:
-  id-token: write
+  id-token: write   # mandatory for OIDC
   contents: read
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    environment: release  # optional, enables manual approval
 
     steps:
+      # 1. Checkout code
       - uses: actions/checkout@v4
-      
+
+      # 2. Setup Node.js (OIDC works automatically here)
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           always-auth: true
-          
+
+      # 3. Install pnpm
       - run: npm install -g pnpm
-        
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        
-      - name: Set version from release
-        run: |
+
+      # 4. Install dependencies
+      - run: pnpm install --frozen-lockfile
+
+      # 5. Set version from release tag
+      - run: |
           VERSION=${GITHUB_REF#refs/tags/}
           VERSION=${VERSION#v}
           echo "Setting package version to $VERSION"
           pnpm version $VERSION --no-git-tag-version
-        
-      - name: Build
-        run: pnpm build
 
-      - name: Publish to npm
-        run: pnpm publish --no-git-checks --access public
+      # 6. Build project
+      - run: pnpm build
 
-      - name: Show npm debug log
-        if: failure()
-        run: cat /home/runner/.npm/_logs/$(ls /home/runner/.npm/_logs | sort | tail -n 1)
+      # 7. Debug: check if OIDC token works
+      - name: Check npm authentication
+        run: npm whoami || (echo "Not authenticated" && exit 1)
 
+      # 8. Publish to npm
+      - run: pnpm publish --no-git-checks --access public
