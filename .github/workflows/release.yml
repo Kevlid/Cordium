@@ -1,4 +1,4 @@
-name: Build and Publish on Release
+name: Release
 
 on:
   release:
@@ -20,12 +20,14 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-          always-auth: true
+
+      - run: npm install -g npm
+
+      - run: npm login --oidc
 
       - run: npm install -g pnpm
-
       - run: pnpm install --frozen-lockfile
-
+      
       - run: |
           VERSION=${GITHUB_REF#refs/tags/}
           VERSION=${VERSION#v}
