@@ -39,3 +39,8 @@ jobs:
 
       - name: Publish to npm
         run: pnpm publish --no-git-checks --access public
+
+      - name: Show npm debug log
+        if: failure()
+        run: cat /home/runner/.npm/_logs/$(ls /home/runner/.npm/_logs | sort | tail -n 1)
+
