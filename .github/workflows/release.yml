@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  build-and-publish:
+  build-and-release:
     runs-on: ubuntu-latest
     environment: release
 
@@ -22,9 +22,6 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - run: npm install -g npm
-
-      - run: npm login --oidc
-
       - run: npm install -g pnpm
       - run: pnpm install --frozen-lockfile
       
