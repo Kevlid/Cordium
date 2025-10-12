@@ -22,7 +22,6 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           always-auth: true
-          node-auth: 'oidc'
           
       - run: npm install -g pnpm
         
