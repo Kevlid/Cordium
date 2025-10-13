@@ -33,7 +33,7 @@ yarn add cordium discord.js
 
 ### Basic Setup
 
-````typescript
+```typescript
 import { Client, GatewayIntentBits } from "discord.js";
 import { Core } from "cordium";
 
@@ -53,38 +53,37 @@ const core = new Core(client, {
     owners: ["YOUR_USER_ID"],
     autoRegisterCommands: true,
     // applicationCommandGuildId: "GUILD_ID", // optional
-    isPluginEnabled?: (pluginName: string, guildId: string) => boolean | Promise<boolean>,
-    beforeCommandRun?: (context: Core.Context) => boolean | Promise<boolean>,
+    isPluginEnabled: (pluginName: string, guildId: string) => boolean | Promise<boolean>,
+    beforeCommandRun: (context: Core.Context) => boolean | Promise<boolean>,
 });
 
 await core.init();
 
 client.login("YOUR_BOT_TOKEN");
-
 ```
 
 ## 📁 Project Structure
 
 ```
-
 your-project/
 ├── plugins/
-│ ├── moderation/
-│ │ ├── plugin.ts
-│ │ ├── commands/
-│ │ │ ├── ban.command.ts
-│ │ │ └── kick.command.ts
-│ │ └── events/
-│ │ └── clientReady.event.ts
-│ └── music/
-│ ├── plugin.ts
-│ └── commands/
-│ ├── play.command.ts
-│ └── queue.command.ts
+│   ├── moderation/
+│   │   ├── moderation.plugin.ts
+│   │   ├── commands/
+│   │   │   ├── ban.command.ts
+│   │   │   └── kick.command.ts
+│   │   └── events/
+│   │       └── clientReady.event.ts
+│   ├── utility/
+│   │   ├── plugin.ts
+│   │   ├── commands/
+│   │   │   ├── ping.command.ts
+│   │   │   └── uptime.command.ts
+│   │   └── events/
+│   │       └── messageCreate.event.ts
 ├── index.ts
 └── package.json
-
-````
+```
 
 ## 🔌 Creating Plugins
 
