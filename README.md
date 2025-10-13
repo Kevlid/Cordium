@@ -1,6 +1,6 @@
 <div align="center">
   <h1>🔥 Cordium</h1>
-  <p><em>The modern, powerful Discord bot framework for TypeScript</em></p>
+  <p><em>A simple but powerful Discord framework</em></p>
   
   [![NPM Version](https://img.shields.io/npm/v/cordium?style=for-the-badge&color=blue)](https://www.npmjs.com/package/cordium)
   [![License](https://img.shields.io/npm/l/cordium?style=for-the-badge&color=green)](LICENSE)
@@ -14,7 +14,7 @@
 
 -   🔌 **Plugin System** - Modular, extensible plugin architecture
 -   ⚡ **Event Handling** - Sophisticated event management with auto-discovery
--   🎯 **Command Framework** - Support for both slash commands and message commands
+-   🎯 **Command Handling** - Support for both slash commands and message commands
 
 ## 🚀 Quick Start
 
@@ -33,45 +33,58 @@ yarn add cordium discord.js
 
 ### Basic Setup
 
-```typescript
-import { Client } from "discord.js";
-import { CordiumCore } from "cordium";
+````typescript
+import { Client, GatewayIntentBits } from "discord.js";
+import { Core } from "cordium";
 
 const client = new Client({
-    intents: ["Guilds", "GuildMessages", "MessageContent"],
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildVoiceStates,
+    ],
 });
 
-const core = new CordiumCore(client, {
+const core = new Core(client, {
     baseDirectory: __dirname,
     prefix: ["!", "?"],
     owners: ["YOUR_USER_ID"],
     autoRegisterCommands: true,
+    // applicationCommandGuildId: "GUILD_ID", // optional
+    isPluginEnabled?: (pluginName: string, guildId: string) => boolean | Promise<boolean>,
+    beforeCommandRun?: (context: Core.Context) => boolean | Promise<boolean>,
 });
-core.init();
+
+await core.init();
 
 client.login("YOUR_BOT_TOKEN");
+
 ```
 
 ## 📁 Project Structure
 
 ```
+
 your-project/
 ├── plugins/
-│   ├── moderation/
-│   │   ├── plugin.ts
-│   │   ├── commands/
-│   │   │   ├── ban.command.ts
-│   │   │   └── kick.command.ts
-│   │   └── events/
-│   │       └── clientReady.event.ts
-│   └── music/
-│       ├── plugin.ts
-│       └── commands/
-│           ├── play.command.ts
-│           └── queue.command.ts
+│ ├── moderation/
+│ │ ├── plugin.ts
+│ │ ├── commands/
+│ │ │ ├── ban.command.ts
+│ │ │ └── kick.command.ts
+│ │ └── events/
+│ │ └── clientReady.event.ts
+│ └── music/
+│ ├── plugin.ts
+│ └── commands/
+│ ├── play.command.ts
+│ └── queue.command.ts
 ├── index.ts
 └── package.json
-```
+
+````
 
 ## 🔌 Creating Plugins
 
@@ -94,8 +107,13 @@ export class ModerationPlugin extends Plugin {
 
 ```typescript
 // plugins/example/commands/hello.command.ts
-import { Command, CommandBuilder } from "cordium";
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { Command } from "cordium";
+import {
+    ChatInputCommandInteraction,
+    Message,
+    ContextMenuCommandInteraction,
+    ApplicationCommandType,
+} from "discord.js";
 
 export class HelloCommand extends Command {
     constructor(buildOptions: Command.BuildOptions) {
@@ -106,26 +124,36 @@ export class HelloCommand extends Command {
         });
     }
 
-    // Build slash command
-    build(builder: CommandBuilder) {
-        return builder.buildSlashCommand((slash) =>
-            slash
-                .setName(this.name)
-                .setDescription("Says hello!")
-                .addUserOption((option) => option.setName("user").setDescription("User to greet").setRequired(false))
-        );
+    // Build application commands (slash / context menu) using the provided CommandBuilder
+    buildApplicationCommands(builder: Command.Builder) {
+        return builder
+            .addSlashBuilder((slash) =>
+                slash
+                    .setName(this.name)
+                    .setDescription("Says hello!")
+                    .addUserOption((option) =>
+                        option.setName("user").setDescription("User to greet").setRequired(false)
+                    )
+            )
+            .addContextMenuBuilder((context) => context.setName("User Info").setType(ApplicationCommandType.User));
     }
 
     // Handle slash command
-    async runChatInput(interaction: ChatInputCommandInteraction) {
+    async onChatInput(interaction: ChatInputCommandInteraction) {
         const user = interaction.options.getUser("user") || interaction.user;
         await interaction.reply(`Hello, ${user}! 👋`);
     }
 
     // Handle message command
-    async runMessage(message: Message, ...args: string[]) {
+    async onMessage(message: Message, ...args: any[]) {
         const mention = message.mentions.users.first() || message.author;
         await message.reply(`Hello, ${mention}! 👋`);
+    }
+
+    // Handle context menu command
+    async onContextMenu(interaction: ContextMenuCommandInteraction) {
+        const user = interaction.targetUser;
+        await interaction.reply(`User: ${user.tag}`);
     }
 }
 ```
@@ -134,7 +162,7 @@ export class HelloCommand extends Command {
 
 ```typescript
 // plugins/example/events/ready.event.ts
-import { Event } from "cordium";
+import { Event, container } from "cordium";
 import { Events } from "discord.js";
 
 export class ClientReadyEvent extends Event {
@@ -146,20 +174,8 @@ export class ClientReadyEvent extends Event {
     }
 
     async run() {
-        console.log(`🚀 Bot is ready! Logged in as ${this.plugin.core.client.user?.tag}`);
+        console.log(`🚀 Bot is ready! Logged in as ${container.core.client.user?.tag}`);
     }
-}
-```
-
-## ⚙️ Configuration
-
-```typescript
-interface CordiumOptions {
-    baseDirectory: string; // Base directory for plugins
-    prefix?: string | string[]; // Command prefix(es)
-    owners?: string | string[]; // Bot owner(s)
-    autoRegisterCommands?: boolean; // Auto-register slash commands
-    isPluginEnabled?: (pluginName: string, guildId: string) => boolean;
 }
 ```
 
@@ -184,30 +200,13 @@ const allCommands = Array.from(container.commandStore);
 
 ```typescript
 // Load specific plugin
-await core.loadPlugin("./plugins/moderation/plugin.js");
+await core.handler.loadPlugin("./plugins/moderation/plugin.js");
 
 // Unload all plugins
-await core.unloadPlugins();
+await core.handler.unloadPlugins();
 
 // Register commands to specific guild
-core.registerCommands("GUILD_ID");
-```
-
-### Context Menu Commands
-
-```typescript
-build(builder: CommandBuilder) {
-  return builder.buildContextMenuCommand(context =>
-    context
-      .setName('User Info')
-      .setType(ApplicationCommandType.User)
-  );
-}
-
-async runContextMenu(interaction: ContextMenuCommandInteraction) {
-  const user = interaction.targetUser;
-  await interaction.reply(`User: ${user.tag}`);
-}
+await core.handler.registerCommands("GUILD_ID");
 ```
 
 ## 🛠️ Development
@@ -222,7 +221,7 @@ pnpm install
 # Build the framework
 pnpm build
 
-# Watch for changes
+# Watch for changes during development
 pnpm dev
 ```
 

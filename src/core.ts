@@ -47,7 +47,7 @@ export class Core {
      */
     public beforeCommandRun: Function | null;
 
-    constructor(client: Client, config: CordiumOptions) {
+    constructor(client: Client, config: Core.Options) {
         container.core = this;
         container.client = client;
 
@@ -86,7 +86,7 @@ export class Core {
     }
 }
 
-export interface CordiumOptions {
+export interface CoreOptions {
     baseDirectory: string;
     prefix?: Array<string> | string;
     owners?: Array<string> | string;
@@ -107,6 +107,6 @@ export interface CoreContext {
 }
 
 export namespace Core {
-    export type Options = CordiumOptions;
+    export type Options = CoreOptions;
     export type Context = CoreContext;
 }

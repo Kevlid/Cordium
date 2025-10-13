@@ -2,13 +2,13 @@
  * Core & General
  */
 export { container } from "./container";
-export { Core as CordiumCore } from "./core";
-// export { CordiumOptions } from "./types";
+export { Core } from "./core";
 
 /**
  * Plugins
  */
 export { Plugin } from "./plugins/plugin.structure";
+
 /**
  * Events
  */
