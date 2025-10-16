@@ -5,7 +5,7 @@ import type {
     ContextMenuCommandInteraction,
     Message,
 } from "discord.js";
-import type { CommandOptions, CommandBuildOptions } from "./command.types";
+import { type CommandOptions, type CommandBuildOptions, ArgumentTypes, CommandArgument } from "./command.types";
 import { CommandBuilder } from "./command.builder";
 import { container } from "../container";
 
@@ -34,6 +34,14 @@ export abstract class Command {
     public aliases: Array<string>;
 
     /**
+     * Arguments for the prefix command
+     * @type {Array<CommandArgument>}
+     * @example [{ name: "user", type: ArgumentTypes.STRING }]
+     * @default []
+     */
+    public arguments: Array<CommandArgument>;
+
+    /**
      * The plugin instance that this event belongs to
      * @type {Plugin}
      */
@@ -55,6 +63,7 @@ export abstract class Command {
         this.name = options.name;
         this.description = options.description || "No description provided";
         this.aliases = options.aliases || [];
+        this.arguments = options.arguments || [];
         this.values = options.values;
         this.plugin = buildOptions.plugin;
         this.applicationCommands = new Array<string>();

@@ -1,4 +1,4 @@
-import { ApplicationCommand, GuildMember, Interaction, Message } from "discord.js";
+import { ApplicationCommand, GuildMember, Interaction, Message, User } from "discord.js";
 import type { Core } from "./core";
 import { container } from "./container";
 import { Plugin } from "./plugins/plugin.structure";
@@ -7,6 +7,7 @@ import { Command } from "./commands/command.structure";
 import { pathToFileURL } from "url";
 import path from "path";
 import fs from "fs";
+import { ArgumentTypes } from "./commands/command.types";
 
 export class Handler {
     constructor(handlerOptions: Handler.Options) {
@@ -38,7 +39,9 @@ export class Handler {
         const prefixes: string[] = container.core.prefixes;
         const prefix = prefixes.find((p) => message.content.startsWith(p));
         if (!prefix) return;
-        const [commandName, ...args] = message.content.slice(prefix.length).trim().split(/ +/g);
+        const parts = message.content.slice(prefix.length).trim().split(/ +/g);
+        const commandName = parts.shift() || "";
+        const args: Array<any> = parts;
         if (!commandName) return;
 
         var command = container.commandStore.get(
@@ -59,6 +62,8 @@ export class Handler {
             }
         }
 
+        if (!command.onMessage) return;
+
         if (container.core.beforeCommandRun) {
             const context: Core.Context = {
                 command: command,
@@ -75,9 +80,63 @@ export class Handler {
             }
         }
 
-        if (command.onMessage) {
-            await command.onMessage(message, ...args);
+        if (command.arguments) {
+            for (const [index, argument] of command.arguments.entries()) {
+                var value = args[index];
+                const isRequired = argument.required !== false; // Default to true unless explicitly set to false
+
+                if (isRequired && (value === undefined || value === null)) {
+                    await message.reply(`Argument "${argument.name}" is required`);
+                    return;
+                }
+
+                if (argument.type === ArgumentTypes.Number) {
+                    const parsedValue = parseFloat(value);
+                    if (isNaN(parsedValue)) {
+                        await message.reply(`Argument "${argument.name}" must be a number`);
+                        return;
+                    }
+                    args[index] = parsedValue;
+                } else if (argument.type === ArgumentTypes.Boolean) {
+                    if (value !== "true" && value !== "false") {
+                        await message.reply(`Argument "${argument.name}" must be a boolean (true/false)`);
+                        return;
+                    }
+                    args[index] = value === "true";
+                } else if (argument.type === ArgumentTypes.String) {
+                    if (typeof value !== "string") {
+                        await message.reply(`Argument "${argument.name}" must be a string`);
+                        return;
+                    }
+                } else if (argument.type === ArgumentTypes.User) {
+                    value = value.replace(/^<@!?(\d+)>$/, "");
+                    let user = null;
+                    if (!/^\d+$/.test(value)) {
+                        user = container.client.users.cache.get(value);
+                        if (!user) {
+                            user = await container.client.users.fetch(value);
+                        }
+                    } else if (["u", "you"].includes(value)) {
+                        const repliedMessage = await (async () => {
+                            if (message.reference?.messageId) {
+                                return message.channel.messages.cache.get(message.reference.messageId);
+                            }
+                            return await message.fetchReference().catch(() => null);
+                        })();
+                        user = repliedMessage?.author || null;
+                    } else if (["m", "me"].includes(value)) {
+                        user = message.author;
+                    }
+                    if (!(user instanceof User)) {
+                        await message.reply(`Argument "${argument.name}" must be a valid user`);
+                        return;
+                    }
+                    args[index] = user;
+                }
+            }
         }
+
+        await command.onMessage(message, ...args);
     }
 
     public async onInteractionCreate(interaction: Interaction): Promise<void> {

@@ -18,3 +18,4 @@ export { Event } from "./events/event.structure";
  * Commands
  */
 export { Command } from "./commands/command.structure";
+export { ArgumentTypes } from "./commands/command.types";
