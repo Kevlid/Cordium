@@ -1,13 +1,14 @@
-import { ApplicationCommand, GuildMember, Interaction, Message, User } from "discord.js";
+import { ApplicationCommand, GuildMember, Interaction, Message } from "discord.js";
 import type { Core } from "./core";
 import { container } from "./container";
 import { Plugin } from "./plugins/plugin.structure";
 import { Event } from "./events/event.structure";
 import { Command } from "./commands/command.structure";
+import { ArgumentTypes, CommandArgument } from "./commands/command.types";
+import { CommandArgumentError } from "./commands/command.error";
 import { pathToFileURL } from "url";
 import path from "path";
 import fs from "fs";
-import { ArgumentTypes } from "./commands/command.types";
 
 export class Handler {
     constructor(handlerOptions: Handler.Options) {
@@ -80,63 +81,150 @@ export class Handler {
             }
         }
 
-        if (command.arguments) {
-            for (const [index, argument] of command.arguments.entries()) {
-                var value = args[index];
-                const isRequired = argument.required !== false; // Default to true unless explicitly set to false
+        if (command.arguments && Array.isArray(command.arguments)) {
+            const result = await this.resolveMessageArguments(message, command.arguments, args).catch(async (err) => {
+                if (err) await message.reply(String(err));
+                return null;
+            });
 
-                if (isRequired && (value === undefined || value === null)) {
-                    await message.reply(`Argument "${argument.name}" is required`);
-                    return;
-                }
+            if (!result) return;
+            args.splice(0, args.length, ...result);
+        }
 
-                if (argument.type === ArgumentTypes.Number) {
-                    const parsedValue = parseFloat(value);
-                    if (isNaN(parsedValue)) {
-                        await message.reply(`Argument "${argument.name}" must be a number`);
-                        return;
-                    }
-                    args[index] = parsedValue;
-                } else if (argument.type === ArgumentTypes.Boolean) {
-                    if (value !== "true" && value !== "false") {
-                        await message.reply(`Argument "${argument.name}" must be a boolean (true/false)`);
-                        return;
-                    }
-                    args[index] = value === "true";
-                } else if (argument.type === ArgumentTypes.String) {
-                    if (typeof value !== "string") {
-                        await message.reply(`Argument "${argument.name}" must be a string`);
-                        return;
-                    }
-                } else if (argument.type === ArgumentTypes.User) {
-                    value = value.replace(/^<@!?(\d+)>$/, "");
-                    let user = null;
-                    if (!/^\d+$/.test(value)) {
-                        user = container.client.users.cache.get(value);
-                        if (!user) {
-                            user = await container.client.users.fetch(value);
-                        }
-                    } else if (["u", "you"].includes(value)) {
-                        const repliedMessage = await (async () => {
-                            if (message.reference?.messageId) {
-                                return message.channel.messages.cache.get(message.reference.messageId);
-                            }
-                            return await message.fetchReference().catch(() => null);
-                        })();
-                        user = repliedMessage?.author || null;
-                    } else if (["m", "me"].includes(value)) {
+        await command.onMessage(message, ...args);
+    }
+
+    private async resolveMessageArguments(
+        message: Message,
+        argumentTypes: Array<CommandArgument>,
+        args: string[]
+    ): Promise<any[]> {
+        const resolvedArgs: any[] = [];
+
+        for (let i = 0; i < argumentTypes.length; i++) {
+            const argDef = argumentTypes[i];
+            var argValue = args.shift();
+
+            if (!argValue) {
+                throw new CommandArgumentError(argDef.name, argDef.type, argValue || null);
+            }
+
+            if (typeof argDef.default === "string") {
+                argValue = argValue || argDef.default;
+            }
+
+            switch (argDef.type) {
+                case ArgumentTypes.User: {
+                    var user =
+                        message.client.users.cache.get(argValue) ||
+                        (await message.client.users.fetch(argValue).catch(() => null));
+                    if (!user && argDef.default === true) {
                         user = message.author;
                     }
-                    if (!(user instanceof User)) {
-                        await message.reply(`Argument "${argument.name}" must be a valid user`);
-                        return;
+                    if (!user && argDef.required !== false) {
+                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                     }
-                    args[index] = user;
+                    resolvedArgs.push(user);
+                    break;
+                }
+
+                case ArgumentTypes.Member: {
+                    if (!message.guild) {
+                        throw new Error("Members can only be resolved in guilds");
+                    }
+                    var member =
+                        message.guild?.members.cache.get(argValue) ||
+                        (await message.guild?.members.fetch(argValue).catch(() => null));
+                    if (!member && argDef.default === true) {
+                        member =
+                            message.guild.members.cache.get(message.author.id) ||
+                            (await message.guild.members.fetch(message.author.id).catch(() => null));
+                    }
+                    if (!member && argDef.required !== false) {
+                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                    }
+                    resolvedArgs.push(member);
+                    break;
+                }
+
+                case ArgumentTypes.Role: {
+                    if (!message.guild) {
+                        throw new Error("Roles can only be resolved in guilds");
+                    }
+                    const role =
+                        message.guild.roles.cache.get(argValue) ||
+                        (await message.guild.roles.fetch(argValue).catch(() => null));
+                    if (!role && argDef.required !== false) {
+                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                    }
+                    resolvedArgs.push(role);
+                    break;
+                }
+
+                case ArgumentTypes.Channel: {
+                    var channel =
+                        message.client.channels.cache.get(argValue) ||
+                        (await message.client.channels.fetch(argValue).catch(() => null));
+                    if (!channel && argDef.default === true) {
+                        channel = message.channel;
+                    }
+                    if (!channel && argDef.required !== false) {
+                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                    }
+                    resolvedArgs.push(channel);
+                    break;
+                }
+
+                case ArgumentTypes.Boolean: {
+                    var boolValue = null;
+                    if (argValue.toLowerCase() === "true" || argValue.toLowerCase() === "yes" || argValue === "1") {
+                        boolValue = true;
+                    } else if (
+                        argValue.toLowerCase() === "false" ||
+                        argValue.toLowerCase() === "no" ||
+                        argValue === "0"
+                    ) {
+                        boolValue = false;
+                    }
+                    if (boolValue === null && argDef.required !== false) {
+                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                    }
+                    resolvedArgs.push(boolValue);
+                    break;
+                }
+
+                case ArgumentTypes.Number: {
+                    const numberValue = Number(argValue);
+                    if (isNaN(numberValue) && argDef.required !== false) {
+                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                    }
+                    resolvedArgs.push(numberValue);
+                    break;
+                }
+
+                case ArgumentTypes.String: {
+                    if (argDef.rest) {
+                        if (!argValue && argDef.required !== false) {
+                            throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        }
+                        resolvedArgs.push(args.join(" "));
+                        args.length = 0;
+                    } else {
+                        if (!argValue && argDef.required !== false) {
+                            throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        }
+                        resolvedArgs.push(argValue);
+                    }
+                    break;
+                }
+
+                default: {
+                    throw new CommandArgumentError(argDef.name, null, argValue);
                 }
             }
         }
 
-        await command.onMessage(message, ...args);
+        return resolvedArgs;
     }
 
     public async onInteractionCreate(interaction: Interaction): Promise<void> {

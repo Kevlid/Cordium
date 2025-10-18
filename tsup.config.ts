@@ -1,30 +1,35 @@
 import { defineConfig } from "tsup";
 
-export default defineConfig([
-    {
+export default defineConfig((options) => {
+    const sharedOptions = {
         entry: ["src/**/*.ts"],
-        format: "cjs",
-        outDir: "dist/cjs",
-        dts: true,
-        clean: true,
         sourcemap: true,
         minify: false,
         splitting: false,
         treeshake: true,
         target: "es2020",
         keepNames: true,
-    },
-    {
-        entry: ["src/**/*.ts"],
-        format: "esm",
-        outDir: "dist/esm",
-        dts: true,
-        clean: true,
-        sourcemap: true,
-        minify: false,
-        splitting: false,
-        treeshake: true,
-        target: "es2020",
-        keepNames: true,
-    },
-]);
+        skipNodeModulesBundle: true,
+        clean: !options.watch,
+    };
+
+    return [
+        {
+            ...sharedOptions,
+            outDir: "dist/cjs",
+            format: ["cjs"],
+        },
+        {
+            ...sharedOptions,
+            outDir: "dist/esm",
+            format: ["esm"],
+        },
+        {
+            ...sharedOptions,
+            outDir: "dist",
+            dts: { only: true },
+            format: undefined,
+            entry: ["src/index.ts"],
+        },
+    ];
+});

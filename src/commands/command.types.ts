@@ -12,6 +12,8 @@ export interface CommandArgument {
     name: string;
     type: ArgumentTypes;
     required?: boolean;
+    default?: boolean | string;
+    rest?: boolean;
 }
 
 export enum ArgumentTypes {
@@ -19,6 +21,9 @@ export enum ArgumentTypes {
     Number = "number",
     Boolean = "boolean",
     User = "user",
+    Member = "member",
+    Channel = "channel",
+    Role = "role",
 }
 
 export interface CommandBuildOptions {
