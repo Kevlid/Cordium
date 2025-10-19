@@ -104,7 +104,8 @@ export class Handler {
         for (let i = 0; i < argumentTypes.length; i++) {
             const argDef = argumentTypes[i];
             var argValue = args[0];
-            const onlyOneUser =
+            var clearArg = true;
+            var onlyOneUser =
                 argumentTypes.filter((a) => [ArgumentTypes.User, ArgumentTypes.Member].includes(a.type)).length === 1;
 
             if (!argValue) {
@@ -128,6 +129,7 @@ export class Handler {
                         }
                         if (referencedMessage) {
                             argValue = referencedMessage.author.id;
+                            clearArg = false;
                         }
                     }
                     var user =
@@ -158,6 +160,7 @@ export class Handler {
                         }
                         if (referencedMessage) {
                             argValue = referencedMessage.author.id;
+                            clearArg = false;
                         }
                     }
                     var member =
@@ -255,7 +258,9 @@ export class Handler {
                     throw new CommandArgumentError(argDef.name, null, argValue);
                 }
             }
-            args.shift();
+            if (clearArg) {
+                args.shift();
+            }
         }
 
         return resolvedArgs;
