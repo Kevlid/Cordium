@@ -234,7 +234,7 @@ pnpm dev
 
 ## 🔗 Links
 
--   [Documentation](https://github.com/Kevlid/Cordium) _(Coming Soon)_
+-   [Documentation](https://github.com/Kevlid/Cordium) _(At some point probably)_
 -   [NPM Package](https://www.npmjs.com/package/cordium)
 -   [GitHub Repository](https://github.com/Kevlid/Cordium)
 
