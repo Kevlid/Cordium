@@ -12,7 +12,7 @@ export interface CommandArgument {
     name: string;
     type: ArgumentTypes;
     required?: boolean;
-    default?: boolean | string;
+    default?: string | number | boolean;
     rest?: boolean;
 }
 

@@ -7,7 +7,7 @@ export class CommandArgumentError extends Error {
         let errorMessage: string;
 
         if (isMissing) {
-            errorMessage = `Argument "${name}" is missing. Expected type "${expected}".`;
+            errorMessage = `Argument "${name}" is missing, Expected type "${expected}".`;
         } else if (isInvalid) {
             errorMessage = `Argument "${name}" received value "${received}", which is not a valid type in "${expected}".`;
         } else {

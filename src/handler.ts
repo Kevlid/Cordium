@@ -83,7 +83,7 @@ export class Handler {
 
         if (command.arguments && Array.isArray(command.arguments)) {
             const result = await this.resolveMessageArguments(message, command.arguments, args).catch(async (err) => {
-                if (err) await message.reply(String(err));
+                if (err) await message.reply(String(err.message));
                 return null;
             });
 
@@ -108,18 +108,17 @@ export class Handler {
             var onlyOneUser =
                 argumentTypes.filter((a) => [ArgumentTypes.User, ArgumentTypes.Member].includes(a.type)).length === 1;
 
-            if (!argValue) {
+            if (!argValue && argDef.required !== false && argDef.default === undefined) {
                 throw new CommandArgumentError(argDef.name, argDef.type, argValue || null);
-            }
-
-            if (typeof argDef.default === "string") {
-                argValue = argValue || argDef.default;
             }
 
             switch (argDef.type) {
                 case ArgumentTypes.User: {
                     argValue = String(argValue).replace("<@", "").replace(">", "");
-                    if (!isNaN(Number(argValue)) && onlyOneUser) {
+                    var user =
+                        message.client.users.cache.get(argValue) ||
+                        (await message.client.users.fetch(argValue).catch(() => null));
+                    if (!user && onlyOneUser) {
                         let messageId = message.reference?.messageId;
                         var referencedMessage = null;
                         if (messageId) {
@@ -130,13 +129,14 @@ export class Handler {
                         if (referencedMessage) {
                             argValue = referencedMessage.author.id;
                             clearArg = false;
+                            user =
+                                message.client.users.cache.get(argValue) ||
+                                (await message.client.users.fetch(argValue).catch(() => null));
                         }
                     }
-                    var user =
-                        message.client.users.cache.get(argValue) ||
-                        (await message.client.users.fetch(argValue).catch(() => null));
                     if (!user && argDef.default === true) {
                         user = message.author;
+                        clearArg = false;
                     }
                     if (!user && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
@@ -150,7 +150,10 @@ export class Handler {
                         throw new Error("Members can only be resolved in guilds");
                     }
                     argValue = String(argValue).replace("<@", "").replace(">", "");
-                    if (!isNaN(Number(argValue)) && onlyOneUser) {
+                    var member =
+                        message.guild?.members.cache.get(argValue) ||
+                        (await message.guild?.members.fetch(argValue).catch(() => null));
+                    if (!member && onlyOneUser) {
                         let messageId = message.reference?.messageId;
                         var referencedMessage = null;
                         if (messageId) {
@@ -161,15 +164,16 @@ export class Handler {
                         if (referencedMessage) {
                             argValue = referencedMessage.author.id;
                             clearArg = false;
+                            member =
+                                message.guild.members.cache.get(argValue) ||
+                                (await message.guild.members.fetch(argValue).catch(() => null));
                         }
                     }
-                    var member =
-                        message.guild?.members.cache.get(argValue) ||
-                        (await message.guild?.members.fetch(argValue).catch(() => null));
                     if (!member && argDef.default === true) {
                         member =
                             message.guild.members.cache.get(message.author.id) ||
                             (await message.guild.members.fetch(message.author.id).catch(() => null));
+                        clearArg = false;
                     }
                     if (!member && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
@@ -203,6 +207,7 @@ export class Handler {
                         (await message.client.channels.fetch(argValue).catch(() => null));
                     if (!channel && argDef.default === true) {
                         channel = message.channel;
+                        clearArg = false;
                     }
                     if (!channel && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
@@ -213,14 +218,15 @@ export class Handler {
 
                 case ArgumentTypes.Boolean: {
                     var boolValue = null;
-                    if (argValue.toLowerCase() === "true" || argValue.toLowerCase() === "yes" || argValue === "1") {
+                    argValue = argValue?.toLowerCase();
+                    if (["true", "yes", "1"].includes(argValue)) {
                         boolValue = true;
-                    } else if (
-                        argValue.toLowerCase() === "false" ||
-                        argValue.toLowerCase() === "no" ||
-                        argValue === "0"
-                    ) {
+                    } else if (["false", "no", "0"].includes(argValue)) {
                         boolValue = false;
+                    }
+                    if (boolValue === null && typeof argDef.default === "boolean") {
+                        boolValue = argDef.default;
+                        clearArg = false;
                     }
                     if (boolValue === null && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
@@ -230,7 +236,11 @@ export class Handler {
                 }
 
                 case ArgumentTypes.Number: {
-                    const numberValue = Number(argValue);
+                    var numberValue = Number(argValue);
+                    if (isNaN(numberValue) && typeof argDef.default === "number") {
+                        numberValue = argDef.default;
+                        clearArg = false;
+                    }
                     if (isNaN(numberValue) && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                     }
@@ -240,12 +250,20 @@ export class Handler {
 
                 case ArgumentTypes.String: {
                     if (argDef.rest) {
+                        if (!argValue && typeof argDef.default === "string") {
+                            argValue = argDef.default;
+                        } else {
+                            argValue = args.join(" ");
+                            args.length = 0;
+                        }
                         if (!argValue && argDef.required !== false) {
                             throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                         }
-                        resolvedArgs.push(args.join(" "));
-                        args.length = 0;
+                        resolvedArgs.push(argValue);
                     } else {
+                        if (!argValue && typeof argDef.default === "string") {
+                            argValue = argDef.default;
+                        }
                         if (!argValue && argDef.required !== false) {
                             throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                         }
