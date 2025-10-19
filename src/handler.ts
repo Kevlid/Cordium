@@ -103,7 +103,9 @@ export class Handler {
 
         for (let i = 0; i < argumentTypes.length; i++) {
             const argDef = argumentTypes[i];
-            var argValue = args.shift();
+            var argValue = args[0];
+            const onlyOneUser =
+                argumentTypes.filter((a) => [ArgumentTypes.User, ArgumentTypes.Member].includes(a.type)).length === 1;
 
             if (!argValue) {
                 throw new CommandArgumentError(argDef.name, argDef.type, argValue || null);
@@ -115,6 +117,19 @@ export class Handler {
 
             switch (argDef.type) {
                 case ArgumentTypes.User: {
+                    argValue = String(argValue).replace("<@", "").replace(">", "");
+                    if (!isNaN(Number(argValue)) && onlyOneUser) {
+                        let messageId = message.reference?.messageId;
+                        var referencedMessage = null;
+                        if (messageId) {
+                            referencedMessage =
+                                message.channel.messages.cache.get(messageId) ||
+                                (await message.channel.messages.fetch(messageId).catch(() => null));
+                        }
+                        if (referencedMessage) {
+                            argValue = referencedMessage.author.id;
+                        }
+                    }
                     var user =
                         message.client.users.cache.get(argValue) ||
                         (await message.client.users.fetch(argValue).catch(() => null));
@@ -131,6 +146,19 @@ export class Handler {
                 case ArgumentTypes.Member: {
                     if (!message.guild) {
                         throw new Error("Members can only be resolved in guilds");
+                    }
+                    argValue = String(argValue).replace("<@", "").replace(">", "");
+                    if (!isNaN(Number(argValue)) && onlyOneUser) {
+                        let messageId = message.reference?.messageId;
+                        var referencedMessage = null;
+                        if (messageId) {
+                            referencedMessage =
+                                message.channel.messages.cache.get(messageId) ||
+                                (await message.channel.messages.fetch(messageId).catch(() => null));
+                        }
+                        if (referencedMessage) {
+                            argValue = referencedMessage.author.id;
+                        }
                     }
                     var member =
                         message.guild?.members.cache.get(argValue) ||
@@ -151,6 +179,7 @@ export class Handler {
                     if (!message.guild) {
                         throw new Error("Roles can only be resolved in guilds");
                     }
+                    argValue = String(argValue).replace("<@&", "").replace(">", "");
                     const role =
                         message.guild.roles.cache.get(argValue) ||
                         (await message.guild.roles.fetch(argValue).catch(() => null));
@@ -162,6 +191,10 @@ export class Handler {
                 }
 
                 case ArgumentTypes.Channel: {
+                    if (!message.guild) {
+                        throw new Error("Channels can only be resolved in guilds");
+                    }
+                    argValue = String(argValue).replace("<#", "").replace(">", "");
                     var channel =
                         message.client.channels.cache.get(argValue) ||
                         (await message.client.channels.fetch(argValue).catch(() => null));
@@ -222,6 +255,7 @@ export class Handler {
                     throw new CommandArgumentError(argDef.name, null, argValue);
                 }
             }
+            args.shift();
         }
 
         return resolvedArgs;
