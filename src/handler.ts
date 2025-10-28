@@ -273,6 +273,59 @@ export class Handler {
                     break;
                 }
 
+                case ArgumentTypes.Date: {
+                    if (!argValue) {
+                        if (argDef.default instanceof Date) {
+                            resolvedArgs.push(argDef.default);
+                        } else if (argDef.required !== false) {
+                            throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        }
+                        break;
+                    }
+
+                    let now = new Date();
+
+                    // Check for relative time (e.g., 1s, 1m, 1h, 1d)
+                    let relativeTimeMatch = argValue.match(/(\d+)([smhd])/);
+                    if (relativeTimeMatch) {
+                        let [_, value, unit] = relativeTimeMatch;
+                        let multiplier = { s: 1000, m: 60 * 1000, h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000 }[unit];
+                        if (multiplier) {
+                            resolvedArgs.push(new Date(now.getTime() + parseInt(value, 10) * multiplier));
+                            break;
+                        }
+                    }
+
+                    // Check for specific time formats
+                    let timeFormats = [
+                        { regex: /^(\d{1,2}):(\d{2})$/, handler: ([h, m]: string[]) => now.setHours(+h, +m, 0, 0) }, // 10:30
+                        {
+                            regex: /^(\d{1,2})(am|pm)$/i,
+                            handler: ([h, period]: string[]) =>
+                                now.setHours(period.toLowerCase() === "pm" ? +h + 12 : +h, 0, 0, 0),
+                        }, // 5pm
+                        {
+                            regex: /^(\d{1,2}):(\d{2})(am|pm)$/i,
+                            handler: ([h, m, period]: string[]) =>
+                                now.setHours(period.toLowerCase() === "pm" ? +h + 12 : +h, +m, 0, 0),
+                        }, // 5:30pm
+                    ];
+
+                    let matchedFormat = timeFormats.find(({ regex }) => regex.test(argValue));
+                    if (matchedFormat) {
+                        let match = argValue.match(matchedFormat.regex)!.slice(1);
+                        resolvedArgs.push(new Date(matchedFormat.handler(match)));
+                        break;
+                    }
+
+                    let parsedDate = new Date(argValue);
+                    if (isNaN(parsedDate.getTime())) {
+                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                    }
+                    resolvedArgs.push(parsedDate);
+                    break;
+                }
+
                 default: {
                     throw new CommandArgumentError(argDef.name, null, argValue);
                 }
