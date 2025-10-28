@@ -19,9 +19,9 @@ export class Handler {
     }
 
     public async onEventTriggered(eventName: string, ...args: any[]): Promise<void> {
-        const event: Event | null = container.eventStore.get((e: Event) => e.name === eventName) || null;
-        if (event) {
-            await event.run(...args);
+        const events: Event[] = Array.from(container.eventStore).filter((e: Event) => e.name === eventName);
+        for (const event of events) {
+            event.run(...args);
         }
     }
 
