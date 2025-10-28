@@ -26,6 +26,13 @@ export abstract class Command {
     public description: string;
 
     /**
+     * Whether the command is only usable in a guild
+     * @type {boolean}
+     * @default false
+     */
+    public guildOnly: boolean;
+
+    /**
      * Aliases for the command
      * @type {Array<string>}
      * @example ["b", "banish"]
@@ -62,6 +69,7 @@ export abstract class Command {
     constructor(buildOptions: Command.BuildOptions, options: Command.Options) {
         this.name = options.name;
         this.description = options.description || "No description provided";
+        this.guildOnly = options.guildOnly || false;
         this.aliases = options.aliases || [];
         this.arguments = options.arguments || [];
         this.values = options.values;

@@ -64,6 +64,7 @@ export class Handler {
         }
 
         if (!command.onMessage) return;
+        if (command.guildOnly && !message.guild) return;
 
         if (container.core.beforeCommandRun) {
             const context: Core.Context = {

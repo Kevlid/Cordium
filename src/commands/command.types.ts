@@ -3,6 +3,7 @@ import { Plugin } from "../plugins/plugin.structure";
 export interface CommandOptions {
     name: string;
     description?: string;
+    guildOnly?: boolean;
     aliases?: Array<string>;
     arguments?: Array<CommandArgument>;
     values?: Record<string, any>;
