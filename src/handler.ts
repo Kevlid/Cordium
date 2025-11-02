@@ -142,7 +142,7 @@ export class Handler {
                     if (!user && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                     }
-                    resolvedArgs.push(user);
+                    resolvedArgs.push(user || null);
                     break;
                 }
 
@@ -179,7 +179,7 @@ export class Handler {
                     if (!member && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                     }
-                    resolvedArgs.push(member);
+                    resolvedArgs.push(member || null);
                     break;
                 }
 
@@ -194,7 +194,7 @@ export class Handler {
                     if (!role && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                     }
-                    resolvedArgs.push(role);
+                    resolvedArgs.push(role || null);
                     break;
                 }
 
@@ -213,7 +213,7 @@ export class Handler {
                     if (!channel && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                     }
-                    resolvedArgs.push(channel);
+                    resolvedArgs.push(channel || null);
                     break;
                 }
 
@@ -232,7 +232,7 @@ export class Handler {
                     if (boolValue === null && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                     }
-                    resolvedArgs.push(boolValue);
+                    resolvedArgs.push(boolValue || null);
                     break;
                 }
 
@@ -245,7 +245,7 @@ export class Handler {
                     if (isNaN(numberValue) && argDef.required !== false) {
                         throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                     }
-                    resolvedArgs.push(numberValue);
+                    resolvedArgs.push(numberValue || null);
                     break;
                 }
 
@@ -260,7 +260,7 @@ export class Handler {
                         if (!argValue && argDef.required !== false) {
                             throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                         }
-                        resolvedArgs.push(argValue);
+                        resolvedArgs.push(argValue || null);
                     } else {
                         if (!argValue && typeof argDef.default === "string") {
                             argValue = argDef.default;
@@ -268,7 +268,7 @@ export class Handler {
                         if (!argValue && argDef.required !== false) {
                             throw new CommandArgumentError(argDef.name, argDef.type, argValue);
                         }
-                        resolvedArgs.push(argValue);
+                        resolvedArgs.push(argValue || null);
                     }
                     break;
                 }
