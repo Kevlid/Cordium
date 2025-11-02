@@ -115,7 +115,7 @@ export class Handler {
 
         for (let i = 0; i < argumentTypes.length; i++) {
             const argDef = argumentTypes[i];
-            var argValue = args[0];
+            var argValue: any = args[0];
             var clearArg = true;
             var onlyOneUser =
                 argumentTypes.filter((a) => [ArgumentTypes.User, ArgumentTypes.Member].includes(a.type)).length === 1;
@@ -282,18 +282,15 @@ export class Handler {
                         throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
                     resolvedArgs.push(argValue || null);
+                    break;
                 }
 
                 case ArgumentTypes.Date: {
-                    if (!argValue) {
-                        if (argDef.default instanceof Date) {
-                            resolvedArgs.push(argDef.default);
-                        } else if (argDef.required !== false) {
-                            throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
-                        }
+                    if (!argValue && argDef.default instanceof Date) {
+                        resolvedArgs.push(argDef.default);
+                        clearArg = false;
                         break;
                     }
-
                     let now = new Date();
 
                     // 1s, 1m, 1h, 1d, 21d4h5m3s
@@ -308,8 +305,7 @@ export class Handler {
                         if (seconds) totalMilliseconds += parseInt(seconds, 10) * 1000;
 
                         if (totalMilliseconds > 0) {
-                            resolvedArgs.push(new Date(now.getTime() + totalMilliseconds));
-                            break;
+                            argValue = new Date(now.getTime() + totalMilliseconds);
                         }
                     }
 
@@ -326,24 +322,24 @@ export class Handler {
                                 now.setHours(period.toLowerCase() === "pm" ? +h + 12 : +h, +m, 0, 0),
                         }, // 5:30pm
                     ];
-
                     let matchedFormat = timeFormats.find(({ regex }) => regex.test(argValue));
                     if (matchedFormat) {
                         let match = argValue.match(matchedFormat.regex)!.slice(1);
-                        resolvedArgs.push(new Date(matchedFormat.handler(match)));
-                        break;
+                        argValue = new Date(matchedFormat.handler(match));
                     }
 
-                    let parsedDate = new Date(argValue);
-                    if (isNaN(parsedDate.getTime())) {
+                    if (!(argValue instanceof Date)) {
+                        argValue = new Date(argValue);
+                    }
+                    if (!argValue && argDef.required !== false) {
                         throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
-                    resolvedArgs.push(parsedDate);
+                    resolvedArgs.push(argValue || null);
                     break;
                 }
 
                 default: {
-                    throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
+                    throw new Error(`Invalid argument type: ${argDef.type}`);
                 }
             }
             if (clearArg) {
