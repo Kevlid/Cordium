@@ -331,10 +331,13 @@ export class Handler {
                     if (!(argValue instanceof Date)) {
                         argValue = new Date(argValue);
                     }
-                    if (!argValue && argDef.required !== false) {
-                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
+                    if (isNaN(argValue.getTime())) {
+                        if (argDef.required !== false) {
+                            throw new Error(`Argument of type "${argDef.type}" is invalid or was not provided`);
+                        }
+                        argValue = null;
                     }
-                    resolvedArgs.push(argValue || null);
+                    resolvedArgs.push(argValue);
                     break;
                 }
 
