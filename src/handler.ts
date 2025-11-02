@@ -83,16 +83,27 @@ export class Handler {
         }
 
         if (command.arguments && Array.isArray(command.arguments)) {
-            const result = await this.resolveMessageArguments(message, command.arguments, args).catch(async (err) => {
-                if (err) await message.reply(String(err.message));
-                return null;
-            });
+            let result = null;
+            try {
+                this.validateArgumentTypes(command.arguments);
+                result = await this.resolveMessageArguments(message, command.arguments, args);
+            } catch (err) {
+                await message.reply(String(err));
+                result = null;
+            }
 
             if (!result) return;
             args.splice(0, args.length, ...result);
         }
 
         await command.onMessage(message, ...args);
+    }
+
+    private validateArgumentTypes(argumentTypes: Array<CommandArgument>): void {
+        const textIndex = argumentTypes.findIndex((arg) => arg.type === ArgumentTypes.Text);
+        if (textIndex !== -1 && textIndex !== argumentTypes.length - 1) {
+            throw new Error("No arguments can follow an argument of type 'Text'");
+        }
     }
 
     private async resolveMessageArguments(
@@ -110,7 +121,7 @@ export class Handler {
                 argumentTypes.filter((a) => [ArgumentTypes.User, ArgumentTypes.Member].includes(a.type)).length === 1;
 
             if (!argValue && argDef.required !== false && argDef.default === undefined) {
-                throw new CommandArgumentError(argDef.name, argDef.type, argValue || null);
+                throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
             }
 
             switch (argDef.type) {
@@ -140,7 +151,7 @@ export class Handler {
                         clearArg = false;
                     }
                     if (!user && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
                     resolvedArgs.push(user || null);
                     break;
@@ -177,7 +188,7 @@ export class Handler {
                         clearArg = false;
                     }
                     if (!member && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
                     resolvedArgs.push(member || null);
                     break;
@@ -192,7 +203,7 @@ export class Handler {
                         message.guild.roles.cache.get(argValue) ||
                         (await message.guild.roles.fetch(argValue).catch(() => null));
                     if (!role && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
                     resolvedArgs.push(role || null);
                     break;
@@ -211,7 +222,7 @@ export class Handler {
                         clearArg = false;
                     }
                     if (!channel && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
                     resolvedArgs.push(channel || null);
                     break;
@@ -230,7 +241,7 @@ export class Handler {
                         clearArg = false;
                     }
                     if (boolValue === null && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
                     resolvedArgs.push(boolValue || null);
                     break;
@@ -243,34 +254,34 @@ export class Handler {
                         clearArg = false;
                     }
                     if (isNaN(numberValue) && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
                     resolvedArgs.push(numberValue || null);
                     break;
                 }
 
                 case ArgumentTypes.String: {
-                    if (argDef.rest) {
-                        if (!argValue && typeof argDef.default === "string") {
-                            argValue = argDef.default;
-                        } else {
-                            argValue = args.join(" ");
-                            args.length = 0;
-                        }
-                        if (!argValue && argDef.required !== false) {
-                            throw new CommandArgumentError(argDef.name, argDef.type, argValue);
-                        }
-                        resolvedArgs.push(argValue || null);
-                    } else {
-                        if (!argValue && typeof argDef.default === "string") {
-                            argValue = argDef.default;
-                        }
-                        if (!argValue && argDef.required !== false) {
-                            throw new CommandArgumentError(argDef.name, argDef.type, argValue);
-                        }
-                        resolvedArgs.push(argValue || null);
+                    if (!argValue && typeof argDef.default === "string") {
+                        argValue = argDef.default;
                     }
+                    if (!argValue && argDef.required !== false) {
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
+                    }
+                    resolvedArgs.push(argValue || null);
                     break;
+                }
+
+                case ArgumentTypes.Text: {
+                    if (!argValue && typeof argDef.default === "string") {
+                        argValue = argDef.default;
+                    } else {
+                        argValue = args.join(" ");
+                        args.length = 0;
+                    }
+                    if (!argValue && argDef.required !== false) {
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
+                    }
+                    resolvedArgs.push(argValue || null);
                 }
 
                 case ArgumentTypes.Date: {
@@ -278,25 +289,30 @@ export class Handler {
                         if (argDef.default instanceof Date) {
                             resolvedArgs.push(argDef.default);
                         } else if (argDef.required !== false) {
-                            throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                            throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                         }
                         break;
                     }
 
                     let now = new Date();
 
-                    // Check for relative time (e.g., 1s, 1m, 1h, 1d)
-                    let relativeTimeMatch = argValue.match(/(\d+)([smhd])/);
+                    // 1s, 1m, 1h, 1d, 21d4h5m3s
+                    let relativeTimeMatch = argValue.match(/(\d+d)?(\d+h)?(\d+m)?(\d+s)?/);
                     if (relativeTimeMatch) {
-                        let [_, value, unit] = relativeTimeMatch;
-                        let multiplier = { s: 1000, m: 60 * 1000, h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000 }[unit];
-                        if (multiplier) {
-                            resolvedArgs.push(new Date(now.getTime() + parseInt(value, 10) * multiplier));
+                        let [, days, hours, minutes, seconds] = relativeTimeMatch;
+                        let totalMilliseconds = 0;
+
+                        if (days) totalMilliseconds += parseInt(days, 10) * 24 * 60 * 60 * 1000;
+                        if (hours) totalMilliseconds += parseInt(hours, 10) * 60 * 60 * 1000;
+                        if (minutes) totalMilliseconds += parseInt(minutes, 10) * 60 * 1000;
+                        if (seconds) totalMilliseconds += parseInt(seconds, 10) * 1000;
+
+                        if (totalMilliseconds > 0) {
+                            resolvedArgs.push(new Date(now.getTime() + totalMilliseconds));
                             break;
                         }
                     }
 
-                    // Check for specific time formats
                     let timeFormats = [
                         { regex: /^(\d{1,2}):(\d{2})$/, handler: ([h, m]: string[]) => now.setHours(+h, +m, 0, 0) }, // 10:30
                         {
@@ -320,14 +336,14 @@ export class Handler {
 
                     let parsedDate = new Date(argValue);
                     if (isNaN(parsedDate.getTime())) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
                     resolvedArgs.push(parsedDate);
                     break;
                 }
 
                 default: {
-                    throw new CommandArgumentError(argDef.name, null, argValue);
+                    throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                 }
             }
             if (clearArg) {

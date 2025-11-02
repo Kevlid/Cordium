@@ -10,11 +10,9 @@ export interface CommandOptions {
 }
 
 export interface CommandArgument {
-    name: string;
     type: ArgumentTypes;
     required?: boolean;
     default?: string | number | boolean | Date;
-    rest?: boolean;
 }
 
 export enum ArgumentTypes {
@@ -26,6 +24,7 @@ export enum ArgumentTypes {
     Channel = "channel",
     Role = "role",
     Date = "date",
+    Text = "text",
 }
 
 export interface CommandBuildOptions {
