@@ -336,6 +336,7 @@ export class Handler {
                             throw new Error(`Argument of type "${argDef.type}" is invalid or was not provided`);
                         }
                         argValue = null;
+                        clearArg = false;
                     }
                     resolvedArgs.push(argValue);
                     break;
