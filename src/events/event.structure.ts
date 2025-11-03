@@ -43,7 +43,8 @@ export abstract class Event {
         if (!container.eventStore.get((e: Event) => e.name === this.name && e.plugin.name === this.plugin.name)) {
             throw new Error(`Event with name ${this.name} does not exist in plugin ${this.plugin.name}`);
         }
-        // Unload the event
+        container.eventStore.remove((e: Event) => e.name === this.name && e.plugin.name === this.plugin.name);
+        // TODO: Remove event listener if no more events with this name exist
     }
 
     public abstract run(...args: any[]): Promise<void> | void;

@@ -1,6 +1,7 @@
 import type { PluginBuildOptions, PluginOptions } from "./plugin.types";
 import { Event } from "../events/event.structure";
 import { Command } from "../commands/command.structure";
+import { Task } from "../tasks/task.structure";
 import { container } from "../container";
 import { pathToFileURL } from "url";
 import path from "path";
@@ -39,6 +40,12 @@ export class Plugin {
      */
     public commandPath: string | null = null;
 
+    /**
+     * The path to the task directory
+     * @type {string}
+     */
+    public taskPath: string | null = null;
+
     constructor(buildOptions: Plugin.BuildOptions, options: Plugin.Options) {
         this.name = options.name || this.constructor.name;
         this.description = options.description;
@@ -55,6 +62,12 @@ export class Plugin {
             ? path.join(this.directoryPath, options.commandPath)
             : path.join(this.directoryPath, "commands");
         this.commandPath = fs.existsSync(commandDir) ? commandDir : null;
+
+        // Set up the task path
+        const taskDir = options.commandPath
+            ? path.join(this.directoryPath, options.commandPath)
+            : path.join(this.directoryPath, "tasks");
+        this.taskPath = fs.existsSync(taskDir) ? taskDir : null;
     }
 
     public async load(): Promise<void> {
@@ -121,6 +134,36 @@ export class Plugin {
             }
         }
 
+        // Scan the directory for tasks and load them
+        if (this.taskPath) {
+            const taskFiles = this.scanDirectory(this.taskPath, ".task");
+            for (const file of taskFiles) {
+                let imported;
+                try {
+                    const taskUrl = pathToFileURL(path.resolve(file)).href;
+                    imported = await import(taskUrl);
+                } catch (err) {
+                    imported = require(path.resolve(file));
+                }
+                const ExportedTask = imported.default || Object.values(imported)[0];
+                const TaskClass =
+                    typeof ExportedTask === "function"
+                        ? ExportedTask
+                        : Object.values(imported).find((v) => typeof v === "function" && v.prototype instanceof Task);
+
+                if (!TaskClass) {
+                    throw new Error(`No valid task class found in ${file}`);
+                }
+
+                const instance = new TaskClass({ plugin: this });
+                if (!(instance instanceof Task)) {
+                    throw new Error(`Task ${file} does not extend the Task class`);
+                }
+
+                instance.load();
+            }
+        }
+
         container.pluginStore.add(this);
     }
 
@@ -128,7 +171,16 @@ export class Plugin {
         if (!container.pluginStore.get((p: Plugin) => p.name === this.name)) {
             throw new Error(`Plugin with name ${this.name} does not exist`);
         }
-        // Unload the plugin
+        container.pluginStore.remove((p: Plugin) => p.name === this.name);
+
+        const eventsToUnload = container.eventStore.filter((e: Event) => e.plugin.name === this.name);
+        eventsToUnload.forEach((event) => event.unload());
+
+        const commandsToUnload = container.commandStore.filter((cmd: Command) => cmd.plugin.name === this.name);
+        commandsToUnload.forEach((cmd) => cmd.unload());
+
+        const tasksToUnload = container.taskStore.filter((t: Task) => t.plugin.name === this.name);
+        tasksToUnload.forEach((task) => task.unload());
     }
 
     private scanDirectory(dir: string, fileType: string): string[] {

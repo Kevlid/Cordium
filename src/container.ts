@@ -3,6 +3,7 @@ import type { Core } from "./core";
 import type { Plugin } from "./plugins/plugin.structure";
 import type { Event } from "./events/event.structure";
 import type { Command } from "./commands/command.structure";
+import type { Task } from "./tasks/task.structure";
 import { StoreSet, StoreMap } from "./store";
 
 export class Container {
@@ -13,6 +14,7 @@ export class Container {
     public eventStore = new StoreSet<Event>();
     public commandStore = new StoreSet<Command>();
     public commandBuilderStore = new StoreSet<SlashCommandBuilder | ContextMenuCommandBuilder>();
+    public taskStore = new StoreSet<Task>();
 }
 
 const CONTAINER_KEY = Symbol.for("cordium.container");

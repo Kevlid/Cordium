@@ -98,7 +98,17 @@ export abstract class Command {
         }
     }
 
-    public unload(): void {}
+    public unload(): void {
+        if (!container.commandStore.get((cmd: Command) => cmd.name === this.name)) {
+            throw new Error(`Command with name ${this.name} does not exist`);
+        }
+        container.commandStore.remove((cmd: Command) => cmd.name === this.name);
+
+        // Remove associated application commands
+        this.applicationCommands.forEach((commandName) => {
+            container.commandBuilderStore.remove((b) => b.name === commandName);
+        });
+    }
 
     public buildApplicationCommands?(builder: CommandBuilder): CommandBuilder;
     public onAutocomplete?(interaction: AutocompleteInteraction): Promise<void> | void;
