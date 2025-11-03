@@ -19,3 +19,8 @@ export { Event } from "./events/event.structure";
  */
 export { Command } from "./commands/command.structure";
 export { ArgumentTypes } from "./commands/command.types";
+
+/**
+ * Tasks
+ */
+export { Task } from "./tasks/task.structure";
