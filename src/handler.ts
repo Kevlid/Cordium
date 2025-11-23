@@ -1,4 +1,4 @@
-import { ApplicationCommand, GuildMember, Interaction, Message } from "discord.js";
+import { ApplicationCommand, GuildMember, Interaction, Message, Routes } from "discord.js";
 import type { Core } from "./core";
 import { container } from "./container";
 import { Plugin } from "./plugins/plugin.structure";
@@ -512,12 +512,18 @@ export class Handler {
             await new Promise<void>((resolve) => container.client.once("clientReady", () => resolve()));
         }
         const commandBuilders = Array.from(container.commandBuilderStore);
+        const commandData = commandBuilders.map((builder) => builder.toJSON());
 
-        if (guildId && container.client.guilds.cache.get(guildId)) {
-            container.client.guilds.cache.get(guildId)?.commands.set(commandBuilders);
-        } else {
-            container.client.application?.commands.set(commandBuilders);
+        const applicationId = container.client.application?.id;
+        if (!applicationId) {
+            throw new Error("[Cordium] Application ID not available");
         }
+
+        const endpoint = guildId
+            ? Routes.applicationGuildCommands(applicationId, guildId)
+            : Routes.applicationCommands(applicationId);
+
+        await container.client.rest.put(endpoint, { body: commandData });
     }
 
     public async unregisterCommands(guildId?: string): Promise<void> {
