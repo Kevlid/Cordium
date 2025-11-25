@@ -37,6 +37,29 @@ export class Handler {
     public async onEventTriggered(eventName: string, ...args: any[]): Promise<void> {
         const events: Event[] = Array.from(container.eventStore).filter((e: Event) => e.name === eventName);
         for (const event of events) {
+            if (container.core.isPluginEnabled) {
+                let guildId: string | null = null;
+                const firstArg = args[0];
+                if (firstArg) {
+                    // direct guildId property (e.g. Interaction, Message)
+                    if (typeof firstArg === "object" && "guildId" in firstArg && firstArg.guildId) {
+                        guildId = String((firstArg as any).guildId);
+                    }
+                    // object with a guild property (e.g. has .guild or .guild.id)
+                    else if (typeof firstArg === "object" && "guild" in firstArg && (firstArg as any).guild) {
+                        const g = (firstArg as any).guild;
+                        if (typeof g === "string") guildId = g;
+                        else if (typeof g === "object" && "id" in g) guildId = String((g as any).id);
+                    }
+                    // the first arg itself is a Guild
+                    else if (firstArg instanceof Guild && (firstArg as Guild).id) {
+                        guildId = (firstArg as Guild).id;
+                    }
+                }
+
+                let isEnabled = await container.core.isPluginEnabled(event.plugin.name, guildId);
+                if (!isEnabled) continue;
+            }
             event.run(...args);
         }
     }
