@@ -150,7 +150,7 @@ export class Handler {
         if (!command.onMessage) return;
         if (command.guildOnly && !message.inGuild()) return;
         if (container.core.isPluginEnabled) {
-            let isEnabled = await container.core.isPluginEnabled(command.plugin, message.guild || null);
+            let isEnabled = await container.core.isPluginEnabled(command.plugin, message.guildId || null);
             if (!isEnabled) return;
         }
         if (command.botPermissions && command.botPermissions.length > 0) {
@@ -466,7 +466,7 @@ export class Handler {
                 return;
             }
             if (container.core.isPluginEnabled) {
-                let isEnabled = await container.core.isPluginEnabled(command.plugin, interaction.guild);
+                let isEnabled = await container.core.isPluginEnabled(command.plugin, interaction.guildId);
                 if (!isEnabled) {
                     await interaction.respond([
                         { name: "This command's plugin is not enabled in this guild", value: "error.plugin_disabled" },
@@ -521,7 +521,7 @@ export class Handler {
                 return;
             }
             if (container.core.isPluginEnabled) {
-                let isEnabled = await container.core.isPluginEnabled(command.plugin, interaction.guild);
+                let isEnabled = await container.core.isPluginEnabled(command.plugin, interaction.guildId);
                 if (!isEnabled) {
                     await interaction.reply({
                         content: "This command's plugin is not enabled in this guild",
@@ -575,7 +575,7 @@ export class Handler {
                 return;
             }
             if (container.core.isPluginEnabled) {
-                let isEnabled = await container.core.isPluginEnabled(command.plugin, interaction.guild);
+                let isEnabled = await container.core.isPluginEnabled(command.plugin, interaction.guildId);
                 if (!isEnabled) {
                     await interaction.reply({
                         content: "This command's plugin is not enabled in this guild",
