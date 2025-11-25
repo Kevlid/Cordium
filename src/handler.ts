@@ -1,4 +1,20 @@
-import { ApplicationCommand, GuildMember, Interaction, Message, Routes } from "discord.js";
+import {
+    ApplicationCommand,
+    Channel,
+    DMChannel,
+    Guild,
+    GuildMember,
+    Interaction,
+    Message,
+    MessageFlags,
+    NewsChannel,
+    PermissionResolvable,
+    PermissionsBitField,
+    Routes,
+    TextChannel,
+    ThreadChannel,
+    User,
+} from "discord.js";
 import type { Core } from "./core";
 import { container } from "./container";
 import { Plugin } from "./plugins/plugin.structure";
@@ -34,6 +50,74 @@ export class Handler {
         container.store.set("loadedEvents", loadedEvents);
     }
 
+    private async checkPermissions(
+        permissions: Array<PermissionResolvable>,
+        user: string | GuildMember | User,
+        options: { guild?: Guild; channel?: Channel } = {}
+    ): Promise<{
+        passed: boolean;
+        missing?: Array<string>;
+    }> {
+        let { guild, channel } = options;
+
+        // Infer guild from channel if not provided
+        if (!guild && channel && "guild" in channel && (channel as any).guild) {
+            guild = (channel as any).guild;
+        }
+
+        if (!permissions || permissions.length === 0) {
+            return { passed: true };
+        }
+
+        // DM channel case
+        if (!guild || channel instanceof DMChannel) {
+            // Only these permissions apply in DMs
+            const allowedInDMs = new PermissionsBitField([
+                PermissionsBitField.Flags.SendMessages,
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.ReadMessageHistory,
+            ]);
+
+            const missing = permissions.filter((p) => !allowedInDMs.has(p));
+            return missing.length === 0 ? { passed: true } : { passed: false, missing: missing.map(String) };
+        }
+
+        // Fetch the member
+        let member: GuildMember | null = null;
+        if (typeof user === "string") {
+            try {
+                member = await guild.members.fetch(user);
+            } catch {
+                return { passed: false, missing: permissions.map(String) };
+            }
+        } else if (user instanceof GuildMember) {
+            member = user;
+        } else if (user instanceof User) {
+            try {
+                member = await guild.members.fetch(user.id);
+            } catch {
+                return { passed: false, missing: permissions.map(String) };
+            }
+        }
+
+        if (!member) return { passed: false, missing: permissions.map(String) };
+
+        // Check channel permissions if available, otherwise guild permissions
+        let missing: Array<PermissionResolvable> = [];
+        if (
+            channel &&
+            (channel instanceof TextChannel || channel instanceof NewsChannel || channel instanceof ThreadChannel)
+        ) {
+            const perms = channel.permissionsFor(member);
+            if (!perms) return { passed: false, missing: permissions.map(String) };
+            missing = permissions.filter((p) => !perms.has(p));
+        } else {
+            missing = permissions.filter((p) => !member!.permissions.has(p));
+        }
+
+        return missing.length === 0 ? { passed: true } : { passed: false, missing: missing.map(String) };
+    }
+
     public async onMessageCreate(message: Message): Promise<void> {
         if (message.author.bot) return;
 
@@ -64,7 +148,19 @@ export class Handler {
         }
 
         if (!command.onMessage) return;
-        if (command.guildOnly && (!message.guild || !message.guildId)) return;
+        if (command.guildOnly && !message.inGuild()) return;
+        if (command.botPermissions && command.botPermissions.length > 0) {
+            const permissionCheck = await this.checkPermissions(command.botPermissions, message.client.user!, {
+                guild: message.guild || undefined,
+                channel: message.channel,
+            });
+            if (!permissionCheck.passed) {
+                await message.reply(
+                    `I am missing the following permissions to run this command: ${permissionCheck.missing?.join(", ")}`
+                );
+                return;
+            }
+        }
 
         if (container.core.beforeCommandRun) {
             const context: Core.Context = {
@@ -359,6 +455,29 @@ export class Handler {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
+            if (command.guildOnly && !interaction.inGuild()) {
+                await interaction.respond([
+                    { name: "This command can only be used in a guild", value: "error.guild_only" },
+                ]);
+                return;
+            }
+            if (command.botPermissions && command.botPermissions.length > 0) {
+                const permissionCheck = await this.checkPermissions(command.botPermissions, interaction.client.user!, {
+                    guild: interaction.guild || undefined,
+                    channel: interaction.channel || undefined,
+                });
+                if (!permissionCheck.passed) {
+                    await interaction.respond([
+                        {
+                            name: `I am missing the following permissions to run this command: ${permissionCheck.missing?.join(
+                                ", "
+                            )}`,
+                            value: "error.missing_permissions",
+                        },
+                    ]);
+                    return;
+                }
+            }
             if (container.core.beforeCommandRun) {
                 const context: Core.Context = {
                     command: command,
@@ -381,6 +500,28 @@ export class Handler {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
+            if (command.guildOnly && !interaction.inGuild()) {
+                await interaction.reply({
+                    content: "This command can only be used in a guild",
+                    flags: [MessageFlags.Ephemeral],
+                });
+                return;
+            }
+            if (command.botPermissions && command.botPermissions.length > 0) {
+                const permissionCheck = await this.checkPermissions(command.botPermissions, interaction.client.user!, {
+                    guild: interaction.guild || undefined,
+                    channel: interaction.channel || undefined,
+                });
+                if (!permissionCheck.passed) {
+                    await interaction.reply({
+                        content: `I am missing the following permissions to run this command: ${permissionCheck.missing?.join(
+                            ", "
+                        )}`,
+                        flags: [MessageFlags.Ephemeral],
+                    });
+                    return;
+                }
+            }
             if (container.core.beforeCommandRun) {
                 const context: Core.Context = {
                     command: command,
@@ -403,6 +544,28 @@ export class Handler {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
+            if (command.guildOnly && !interaction.inGuild()) {
+                await interaction.reply({
+                    content: "This command can only be used in a guild",
+                    flags: [MessageFlags.Ephemeral],
+                });
+                return;
+            }
+            if (command.botPermissions && command.botPermissions.length > 0) {
+                const permissionCheck = await this.checkPermissions(command.botPermissions, interaction.client.user!, {
+                    guild: interaction.guild || undefined,
+                    channel: interaction.channel || undefined,
+                });
+                if (!permissionCheck.passed) {
+                    await interaction.reply({
+                        content: `I am missing the following permissions to run this command: ${permissionCheck.missing?.join(
+                            ", "
+                        )}`,
+                        flags: [MessageFlags.Ephemeral],
+                    });
+                    return;
+                }
+            }
             if (container.core.beforeCommandRun) {
                 const context: Core.Context = {
                     command: command,

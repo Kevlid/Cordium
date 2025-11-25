@@ -1,11 +1,13 @@
+import { PermissionResolvable } from "discord.js";
 import { Plugin } from "../plugins/plugin.structure";
 
 export interface CommandOptions {
     name: string;
     description?: string;
-    guildOnly?: boolean;
     aliases?: Array<string>;
     arguments?: Array<CommandArgument>;
+    guildOnly?: boolean;
+    botPermissions?: Array<PermissionResolvable>;
     values?: Record<string, any>;
 }
 

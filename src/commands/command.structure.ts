@@ -4,6 +4,7 @@ import type {
     ChatInputCommandInteraction,
     ContextMenuCommandInteraction,
     Message,
+    PermissionResolvable,
 } from "discord.js";
 import { type CommandOptions, type CommandBuildOptions, ArgumentTypes, CommandArgument } from "./command.types";
 import { CommandBuilder } from "./command.builder";
@@ -49,6 +50,13 @@ export abstract class Command {
     public arguments: Array<CommandArgument>;
 
     /**
+     * Bot permissions required to run the command
+     * @type {Array<PermissionResolvable>}
+     * @example ["BAN_MEMBERS", "KICK_MEMBERS"]
+     */
+    public botPermissions: Array<PermissionResolvable>;
+
+    /**
      * The plugin instance that this event belongs to
      * @type {Plugin}
      */
@@ -72,6 +80,7 @@ export abstract class Command {
         this.guildOnly = options.guildOnly || false;
         this.aliases = options.aliases || [];
         this.arguments = options.arguments || [];
+        this.botPermissions = options.botPermissions || [];
         this.values = options.values;
         this.plugin = buildOptions.plugin;
         this.applicationCommands = new Array<string>();
