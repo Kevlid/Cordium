@@ -149,6 +149,10 @@ export class Handler {
 
         if (!command.onMessage) return;
         if (command.guildOnly && !message.inGuild()) return;
+        if (container.core.isPluginEnabled) {
+            let isEnabled = await container.core.isPluginEnabled(command.plugin, message.guild || null);
+            if (!isEnabled) return;
+        }
         if (command.botPermissions && command.botPermissions.length > 0) {
             const permissionCheck = await this.checkPermissions(command.botPermissions, message.client.user!, {
                 guild: message.guild || undefined,
@@ -461,6 +465,15 @@ export class Handler {
                 ]);
                 return;
             }
+            if (container.core.isPluginEnabled) {
+                let isEnabled = await container.core.isPluginEnabled(command.plugin, interaction.guild);
+                if (!isEnabled) {
+                    await interaction.respond([
+                        { name: "This command's plugin is not enabled in this guild", value: "error.plugin_disabled" },
+                    ]);
+                    return;
+                }
+            }
             if (command.botPermissions && command.botPermissions.length > 0) {
                 const permissionCheck = await this.checkPermissions(command.botPermissions, interaction.client.user!, {
                     guild: interaction.guild || undefined,
@@ -507,6 +520,16 @@ export class Handler {
                 });
                 return;
             }
+            if (container.core.isPluginEnabled) {
+                let isEnabled = await container.core.isPluginEnabled(command.plugin, interaction.guild);
+                if (!isEnabled) {
+                    await interaction.reply({
+                        content: "This command's plugin is not enabled in this guild",
+                        flags: [MessageFlags.Ephemeral],
+                    });
+                    return;
+                }
+            }
             if (command.botPermissions && command.botPermissions.length > 0) {
                 const permissionCheck = await this.checkPermissions(command.botPermissions, interaction.client.user!, {
                     guild: interaction.guild || undefined,
@@ -550,6 +573,16 @@ export class Handler {
                     flags: [MessageFlags.Ephemeral],
                 });
                 return;
+            }
+            if (container.core.isPluginEnabled) {
+                let isEnabled = await container.core.isPluginEnabled(command.plugin, interaction.guild);
+                if (!isEnabled) {
+                    await interaction.reply({
+                        content: "This command's plugin is not enabled in this guild",
+                        flags: [MessageFlags.Ephemeral],
+                    });
+                    return;
+                }
             }
             if (command.botPermissions && command.botPermissions.length > 0) {
                 const permissionCheck = await this.checkPermissions(command.botPermissions, interaction.client.user!, {
