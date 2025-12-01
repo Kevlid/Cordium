@@ -3,6 +3,8 @@ export interface PluginOptions {
     description?: string;
     eventPath?: string;
     commandPath?: string;
+    pagerPath?: string;
+    taskPath?: string;
 }
 
 export interface PluginBuildOptions {

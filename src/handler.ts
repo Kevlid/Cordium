@@ -1,4 +1,20 @@
-import { ApplicationCommand, GuildMember, Interaction, Message } from "discord.js";
+import {
+    ApplicationCommand,
+    Channel,
+    DMChannel,
+    Guild,
+    GuildMember,
+    Interaction,
+    Message,
+    MessageFlags,
+    NewsChannel,
+    PermissionResolvable,
+    PermissionsBitField,
+    Routes,
+    TextChannel,
+    ThreadChannel,
+    User,
+} from "discord.js";
 import type { Core } from "./core";
 import { container } from "./container";
 import { Plugin } from "./plugins/plugin.structure";
@@ -21,6 +37,29 @@ export class Handler {
     public async onEventTriggered(eventName: string, ...args: any[]): Promise<void> {
         const events: Event[] = Array.from(container.eventStore).filter((e: Event) => e.name === eventName);
         for (const event of events) {
+            if (container.core.isPluginEnabled) {
+                let guildId: string | null = null;
+                const firstArg = args[0];
+                if (firstArg) {
+                    // direct guildId property (e.g. Interaction, Message)
+                    if (typeof firstArg === "object" && "guildId" in firstArg && firstArg.guildId) {
+                        guildId = String((firstArg as any).guildId);
+                    }
+                    // object with a guild property (e.g. has .guild or .guild.id)
+                    else if (typeof firstArg === "object" && "guild" in firstArg && (firstArg as any).guild) {
+                        const g = (firstArg as any).guild;
+                        if (typeof g === "string") guildId = g;
+                        else if (typeof g === "object" && "id" in g) guildId = String((g as any).id);
+                    }
+                    // the first arg itself is a Guild
+                    else if (firstArg instanceof Guild && (firstArg as Guild).id) {
+                        guildId = (firstArg as Guild).id;
+                    }
+                }
+
+                let isEnabled = await container.core.isPluginEnabled(event.plugin.name, guildId);
+                if (!isEnabled) continue;
+            }
             event.run(...args);
         }
     }
@@ -32,6 +71,74 @@ export class Handler {
         }
         loadedEvents.add(eventName);
         container.store.set("loadedEvents", loadedEvents);
+    }
+
+    private async checkPermissions(
+        permissions: Array<PermissionResolvable>,
+        user: string | GuildMember | User,
+        options: { guild?: Guild; channel?: Channel } = {}
+    ): Promise<{
+        passed: boolean;
+        missing?: Array<string>;
+    }> {
+        let { guild, channel } = options;
+
+        // Infer guild from channel if not provided
+        if (!guild && channel && "guild" in channel && (channel as any).guild) {
+            guild = (channel as any).guild;
+        }
+
+        if (!permissions || permissions.length === 0) {
+            return { passed: true };
+        }
+
+        // DM channel case
+        if (!guild || channel instanceof DMChannel) {
+            // Only these permissions apply in DMs
+            const allowedInDMs = new PermissionsBitField([
+                PermissionsBitField.Flags.SendMessages,
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.ReadMessageHistory,
+            ]);
+
+            const missing = permissions.filter((p) => !allowedInDMs.has(p));
+            return missing.length === 0 ? { passed: true } : { passed: false, missing: missing.map(String) };
+        }
+
+        // Fetch the member
+        let member: GuildMember | null = null;
+        if (typeof user === "string") {
+            try {
+                member = await guild.members.fetch(user);
+            } catch {
+                return { passed: false, missing: permissions.map(String) };
+            }
+        } else if (user instanceof GuildMember) {
+            member = user;
+        } else if (user instanceof User) {
+            try {
+                member = await guild.members.fetch(user.id);
+            } catch {
+                return { passed: false, missing: permissions.map(String) };
+            }
+        }
+
+        if (!member) return { passed: false, missing: permissions.map(String) };
+
+        // Check channel permissions if available, otherwise guild permissions
+        let missing: Array<PermissionResolvable> = [];
+        if (
+            channel &&
+            (channel instanceof TextChannel || channel instanceof NewsChannel || channel instanceof ThreadChannel)
+        ) {
+            const perms = channel.permissionsFor(member);
+            if (!perms) return { passed: false, missing: permissions.map(String) };
+            missing = permissions.filter((p) => !perms.has(p));
+        } else {
+            missing = permissions.filter((p) => !member!.permissions.has(p));
+        }
+
+        return missing.length === 0 ? { passed: true } : { passed: false, missing: missing.map(String) };
     }
 
     public async onMessageCreate(message: Message): Promise<void> {
@@ -64,7 +171,23 @@ export class Handler {
         }
 
         if (!command.onMessage) return;
-        if (command.guildOnly && (!message.guild || !message.guildId)) return;
+        if (command.guildOnly && !message.inGuild()) return;
+        if (container.core.isPluginEnabled) {
+            let isEnabled = await container.core.isPluginEnabled(command.plugin.name, message.guildId);
+            if (!isEnabled) return;
+        }
+        if (command.botPermissions && command.botPermissions.length > 0) {
+            const permissionCheck = await this.checkPermissions(command.botPermissions, message.client.user!, {
+                guild: message.guild || undefined,
+                channel: message.channel,
+            });
+            if (!permissionCheck.passed) {
+                await message.reply(
+                    `I am missing the following permissions to run this command: ${permissionCheck.missing?.join(", ")}`
+                );
+                return;
+            }
+        }
 
         if (container.core.beforeCommandRun) {
             const context: Core.Context = {
@@ -83,16 +206,27 @@ export class Handler {
         }
 
         if (command.arguments && Array.isArray(command.arguments)) {
-            const result = await this.resolveMessageArguments(message, command.arguments, args).catch(async (err) => {
-                if (err) await message.reply(String(err.message));
-                return null;
-            });
+            let result = null;
+            try {
+                this.validateArgumentTypes(command.arguments);
+                result = await this.resolveMessageArguments(message, command.arguments, args);
+            } catch (err) {
+                await message.reply(String(err));
+                result = null;
+            }
 
             if (!result) return;
             args.splice(0, args.length, ...result);
         }
 
         await command.onMessage(message, ...args);
+    }
+
+    private validateArgumentTypes(argumentTypes: Array<CommandArgument>): void {
+        const textIndex = argumentTypes.findIndex((arg) => arg.type === ArgumentTypes.Text);
+        if (textIndex !== -1 && textIndex !== argumentTypes.length - 1) {
+            throw new Error("No arguments can follow an argument of type 'Text'");
+        }
     }
 
     private async resolveMessageArguments(
@@ -104,13 +238,13 @@ export class Handler {
 
         for (let i = 0; i < argumentTypes.length; i++) {
             const argDef = argumentTypes[i];
-            var argValue = args[0];
+            var argValue: any = args[0];
             var clearArg = true;
             var onlyOneUser =
                 argumentTypes.filter((a) => [ArgumentTypes.User, ArgumentTypes.Member].includes(a.type)).length === 1;
 
             if (!argValue && argDef.required !== false && argDef.default === undefined) {
-                throw new CommandArgumentError(argDef.name, argDef.type, argValue || null);
+                throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
             }
 
             switch (argDef.type) {
@@ -140,9 +274,9 @@ export class Handler {
                         clearArg = false;
                     }
                     if (!user && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
-                    resolvedArgs.push(user);
+                    resolvedArgs.push(user || null);
                     break;
                 }
 
@@ -177,9 +311,9 @@ export class Handler {
                         clearArg = false;
                     }
                     if (!member && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
-                    resolvedArgs.push(member);
+                    resolvedArgs.push(member || null);
                     break;
                 }
 
@@ -192,9 +326,9 @@ export class Handler {
                         message.guild.roles.cache.get(argValue) ||
                         (await message.guild.roles.fetch(argValue).catch(() => null));
                     if (!role && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
-                    resolvedArgs.push(role);
+                    resolvedArgs.push(role || null);
                     break;
                 }
 
@@ -211,9 +345,9 @@ export class Handler {
                         clearArg = false;
                     }
                     if (!channel && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
-                    resolvedArgs.push(channel);
+                    resolvedArgs.push(channel || null);
                     break;
                 }
 
@@ -230,9 +364,9 @@ export class Handler {
                         clearArg = false;
                     }
                     if (boolValue === null && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
-                    resolvedArgs.push(boolValue);
+                    resolvedArgs.push(boolValue || null);
                     break;
                 }
 
@@ -243,60 +377,61 @@ export class Handler {
                         clearArg = false;
                     }
                     if (isNaN(numberValue) && argDef.required !== false) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
                     }
-                    resolvedArgs.push(numberValue);
+                    resolvedArgs.push(numberValue || null);
                     break;
                 }
 
                 case ArgumentTypes.String: {
-                    if (argDef.rest) {
-                        if (!argValue && typeof argDef.default === "string") {
-                            argValue = argDef.default;
-                        } else {
-                            argValue = args.join(" ");
-                            args.length = 0;
-                        }
-                        if (!argValue && argDef.required !== false) {
-                            throw new CommandArgumentError(argDef.name, argDef.type, argValue);
-                        }
-                        resolvedArgs.push(argValue);
-                    } else {
-                        if (!argValue && typeof argDef.default === "string") {
-                            argValue = argDef.default;
-                        }
-                        if (!argValue && argDef.required !== false) {
-                            throw new CommandArgumentError(argDef.name, argDef.type, argValue);
-                        }
-                        resolvedArgs.push(argValue);
+                    if (!argValue && typeof argDef.default === "string") {
+                        argValue = argDef.default;
                     }
+                    if (!argValue && argDef.required !== false) {
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
+                    }
+                    resolvedArgs.push(argValue || null);
+                    break;
+                }
+
+                case ArgumentTypes.Text: {
+                    if (!argValue && typeof argDef.default === "string") {
+                        argValue = argDef.default;
+                    } else {
+                        argValue = args.join(" ");
+                        args.length = 0;
+                    }
+                    if (!argValue && argDef.required !== false) {
+                        throw new Error(`Argument of type "${argDef.type}" is required but was not provided`);
+                    }
+                    resolvedArgs.push(argValue || null);
                     break;
                 }
 
                 case ArgumentTypes.Date: {
-                    if (!argValue) {
-                        if (argDef.default instanceof Date) {
-                            resolvedArgs.push(argDef.default);
-                        } else if (argDef.required !== false) {
-                            throw new CommandArgumentError(argDef.name, argDef.type, argValue);
-                        }
+                    if (!argValue && argDef.default instanceof Date) {
+                        resolvedArgs.push(argDef.default);
+                        clearArg = false;
                         break;
                     }
-
                     let now = new Date();
 
-                    // Check for relative time (e.g., 1s, 1m, 1h, 1d)
-                    let relativeTimeMatch = argValue.match(/(\d+)([smhd])/);
+                    // 1s, 1m, 1h, 1d, 21d4h5m3s
+                    let relativeTimeMatch = argValue.match(/(\d+d)?(\d+h)?(\d+m)?(\d+s)?/);
                     if (relativeTimeMatch) {
-                        let [_, value, unit] = relativeTimeMatch;
-                        let multiplier = { s: 1000, m: 60 * 1000, h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000 }[unit];
-                        if (multiplier) {
-                            resolvedArgs.push(new Date(now.getTime() + parseInt(value, 10) * multiplier));
-                            break;
+                        let [, days, hours, minutes, seconds] = relativeTimeMatch;
+                        let totalMilliseconds = 0;
+
+                        if (days) totalMilliseconds += parseInt(days, 10) * 24 * 60 * 60 * 1000;
+                        if (hours) totalMilliseconds += parseInt(hours, 10) * 60 * 60 * 1000;
+                        if (minutes) totalMilliseconds += parseInt(minutes, 10) * 60 * 1000;
+                        if (seconds) totalMilliseconds += parseInt(seconds, 10) * 1000;
+
+                        if (totalMilliseconds > 0) {
+                            argValue = new Date(now.getTime() + totalMilliseconds);
                         }
                     }
 
-                    // Check for specific time formats
                     let timeFormats = [
                         { regex: /^(\d{1,2}):(\d{2})$/, handler: ([h, m]: string[]) => now.setHours(+h, +m, 0, 0) }, // 10:30
                         {
@@ -310,24 +445,28 @@ export class Handler {
                                 now.setHours(period.toLowerCase() === "pm" ? +h + 12 : +h, +m, 0, 0),
                         }, // 5:30pm
                     ];
-
                     let matchedFormat = timeFormats.find(({ regex }) => regex.test(argValue));
                     if (matchedFormat) {
                         let match = argValue.match(matchedFormat.regex)!.slice(1);
-                        resolvedArgs.push(new Date(matchedFormat.handler(match)));
-                        break;
+                        argValue = new Date(matchedFormat.handler(match));
                     }
 
-                    let parsedDate = new Date(argValue);
-                    if (isNaN(parsedDate.getTime())) {
-                        throw new CommandArgumentError(argDef.name, argDef.type, argValue);
+                    if (!(argValue instanceof Date)) {
+                        argValue = new Date(argValue);
                     }
-                    resolvedArgs.push(parsedDate);
+                    if (isNaN(argValue.getTime())) {
+                        if (argDef.required !== false) {
+                            throw new Error(`Argument of type "${argDef.type}" is invalid or was not provided`);
+                        }
+                        argValue = null;
+                        clearArg = false;
+                    }
+                    resolvedArgs.push(argValue);
                     break;
                 }
 
                 default: {
-                    throw new CommandArgumentError(argDef.name, null, argValue);
+                    throw new Error(`Invalid argument type: ${argDef.type}`);
                 }
             }
             if (clearArg) {
@@ -343,6 +482,38 @@ export class Handler {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
+            if (command.guildOnly && !interaction.inGuild()) {
+                await interaction.respond([
+                    { name: "This command can only be used in a guild", value: "error.guild_only" },
+                ]);
+                return;
+            }
+            if (container.core.isPluginEnabled) {
+                let isEnabled = await container.core.isPluginEnabled(command.plugin.name, interaction.guildId);
+                if (!isEnabled) {
+                    await interaction.respond([
+                        { name: "This command's plugin is not enabled in this guild", value: "error.plugin_disabled" },
+                    ]);
+                    return;
+                }
+            }
+            if (command.botPermissions && command.botPermissions.length > 0) {
+                const permissionCheck = await this.checkPermissions(command.botPermissions, interaction.client.user!, {
+                    guild: interaction.guild || undefined,
+                    channel: interaction.channel || undefined,
+                });
+                if (!permissionCheck.passed) {
+                    await interaction.respond([
+                        {
+                            name: `I am missing the following permissions to run this command: ${permissionCheck.missing?.join(
+                                ", "
+                            )}`,
+                            value: "error.missing_permissions",
+                        },
+                    ]);
+                    return;
+                }
+            }
             if (container.core.beforeCommandRun) {
                 const context: Core.Context = {
                     command: command,
@@ -365,6 +536,38 @@ export class Handler {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
+            if (command.guildOnly && !interaction.inGuild()) {
+                await interaction.reply({
+                    content: "This command can only be used in a guild",
+                    flags: [MessageFlags.Ephemeral],
+                });
+                return;
+            }
+            if (container.core.isPluginEnabled) {
+                let isEnabled = await container.core.isPluginEnabled(command.plugin.name, interaction.guildId);
+                if (!isEnabled) {
+                    await interaction.reply({
+                        content: "This command's plugin is not enabled in this guild",
+                        flags: [MessageFlags.Ephemeral],
+                    });
+                    return;
+                }
+            }
+            if (command.botPermissions && command.botPermissions.length > 0) {
+                const permissionCheck = await this.checkPermissions(command.botPermissions, interaction.client.user!, {
+                    guild: interaction.guild || undefined,
+                    channel: interaction.channel || undefined,
+                });
+                if (!permissionCheck.passed) {
+                    await interaction.reply({
+                        content: `I am missing the following permissions to run this command: ${permissionCheck.missing?.join(
+                            ", "
+                        )}`,
+                        flags: [MessageFlags.Ephemeral],
+                    });
+                    return;
+                }
+            }
             if (container.core.beforeCommandRun) {
                 const context: Core.Context = {
                     command: command,
@@ -387,6 +590,38 @@ export class Handler {
             const commandName = interaction.commandName;
             var command = container.commandStore.get((cmd: Command) => cmd.applicationCommands.includes(commandName));
             if (!command) return;
+            if (command.guildOnly && !interaction.inGuild()) {
+                await interaction.reply({
+                    content: "This command can only be used in a guild",
+                    flags: [MessageFlags.Ephemeral],
+                });
+                return;
+            }
+            if (container.core.isPluginEnabled) {
+                let isEnabled = await container.core.isPluginEnabled(command.plugin.name, interaction.guildId);
+                if (!isEnabled) {
+                    await interaction.reply({
+                        content: "This command's plugin is not enabled in this guild",
+                        flags: [MessageFlags.Ephemeral],
+                    });
+                    return;
+                }
+            }
+            if (command.botPermissions && command.botPermissions.length > 0) {
+                const permissionCheck = await this.checkPermissions(command.botPermissions, interaction.client.user!, {
+                    guild: interaction.guild || undefined,
+                    channel: interaction.channel || undefined,
+                });
+                if (!permissionCheck.passed) {
+                    await interaction.reply({
+                        content: `I am missing the following permissions to run this command: ${permissionCheck.missing?.join(
+                            ", "
+                        )}`,
+                        flags: [MessageFlags.Ephemeral],
+                    });
+                    return;
+                }
+            }
             if (container.core.beforeCommandRun) {
                 const context: Core.Context = {
                     command: command,
@@ -496,12 +731,18 @@ export class Handler {
             await new Promise<void>((resolve) => container.client.once("clientReady", () => resolve()));
         }
         const commandBuilders = Array.from(container.commandBuilderStore);
+        const commandData = commandBuilders.map((builder) => builder.toJSON());
 
-        if (guildId && container.client.guilds.cache.get(guildId)) {
-            container.client.guilds.cache.get(guildId)?.commands.set(commandBuilders);
-        } else {
-            container.client.application?.commands.set(commandBuilders);
+        const applicationId = container.client.application?.id;
+        if (!applicationId) {
+            throw new Error("[Cordium] Application ID not available");
         }
+
+        const endpoint = guildId
+            ? Routes.applicationGuildCommands(applicationId, guildId)
+            : Routes.applicationCommands(applicationId);
+
+        await container.client.rest.put(endpoint, { body: commandData });
     }
 
     public async unregisterCommands(guildId?: string): Promise<void> {

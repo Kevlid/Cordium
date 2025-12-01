@@ -4,8 +4,9 @@ import type {
     ChatInputCommandInteraction,
     ContextMenuCommandInteraction,
     Message,
+    PermissionResolvable,
 } from "discord.js";
-import { type CommandOptions, type CommandBuildOptions, ArgumentTypes, CommandArgument } from "./command.types";
+import { type CommandOptions, type CommandBuildOptions, CommandArgument } from "./command.types";
 import { CommandBuilder } from "./command.builder";
 import { container } from "../container";
 
@@ -50,6 +51,14 @@ export abstract class Command {
 
     /**
      * The plugin instance that this command belongs to
+     * Bot permissions required to run the command
+     * @type {Array<PermissionResolvable>}
+     * @example ["BAN_MEMBERS", "KICK_MEMBERS"]
+     */
+    public botPermissions: Array<PermissionResolvable>;
+
+    /**
+     * The plugin instance that this command belongs to
      * @type {Plugin}
      */
     public plugin: Plugin;
@@ -72,6 +81,7 @@ export abstract class Command {
         this.guildOnly = options.guildOnly || false;
         this.aliases = options.aliases || [];
         this.arguments = options.arguments || [];
+        this.botPermissions = options.botPermissions || [];
         this.values = options.values;
         this.plugin = buildOptions.plugin;
         this.applicationCommands = new Array<string>();
@@ -98,7 +108,17 @@ export abstract class Command {
         }
     }
 
-    public unload(): void {}
+    public unload(): void {
+        if (!container.commandStore.get((cmd: Command) => cmd.name === this.name)) {
+            throw new Error(`Command with name ${this.name} does not exist`);
+        }
+        container.commandStore.remove((cmd: Command) => cmd.name === this.name);
+
+        // Remove associated application commands
+        this.applicationCommands.forEach((commandName) => {
+            container.commandBuilderStore.remove((b) => b.name === commandName);
+        });
+    }
 
     public buildApplicationCommands?(builder: CommandBuilder): CommandBuilder;
     public onAutocomplete?(interaction: AutocompleteInteraction): Promise<void> | void;

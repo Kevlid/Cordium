@@ -1,5 +1,6 @@
 import { Channel, Client, Guild, GuildMember, Interaction, Message, User } from "discord.js";
 import { Handler } from "./handler";
+import { ComponentHandler } from "./handlers/component.handler";
 import { container } from "./container";
 import type { Command } from "./commands/command.structure";
 import path from "path";
@@ -15,6 +16,11 @@ export class Core {
      * Handles command and events when triggered
      */
     public handler: Handler;
+
+    /**
+     * Handler for Message Components
+     */
+    public componentHandler: ComponentHandler;
 
     /**
      * The prefix(es) for the bot
@@ -51,9 +57,11 @@ export class Core {
         container.core = this;
         container.client = client;
 
+        this.client = client;
         this.handler = new Handler({
             loadMessageCommandListeners: true,
         });
+        this.componentHandler = new ComponentHandler();
 
         const defaultOptions = {
             prefix: "!",
@@ -65,7 +73,6 @@ export class Core {
         if (typeof config.owners === "string") {
             config.owners = [config.owners];
         }
-        this.client = client;
         this.prefixes = config.prefix || [];
         this.owners = config.owners || [];
         this.autoRegisterCommands = config.autoRegisterCommands || false;

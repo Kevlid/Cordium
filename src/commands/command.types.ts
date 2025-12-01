@@ -1,20 +1,20 @@
+import { PermissionResolvable } from "discord.js";
 import { Plugin } from "../plugins/plugin.structure";
 
 export interface CommandOptions {
     name: string;
     description?: string;
-    guildOnly?: boolean;
     aliases?: Array<string>;
     arguments?: Array<CommandArgument>;
+    guildOnly?: boolean;
+    botPermissions?: Array<PermissionResolvable>;
     values?: Record<string, any>;
 }
 
 export interface CommandArgument {
-    name: string;
     type: ArgumentTypes;
     required?: boolean;
     default?: string | number | boolean | Date;
-    rest?: boolean;
 }
 
 export enum ArgumentTypes {
@@ -26,6 +26,7 @@ export enum ArgumentTypes {
     Channel = "channel",
     Role = "role",
     Date = "date",
+    Text = "text",
 }
 
 export interface CommandBuildOptions {

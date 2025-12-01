@@ -19,3 +19,13 @@ export { Event } from "./events/event.structure";
  */
 export { Command } from "./commands/command.structure";
 export { ArgumentTypes } from "./commands/command.types";
+
+/**
+ * Pagers
+ */
+export { Pager } from "./pager/pager.structure";
+
+/**
+ * Tasks
+ */
+export { Task } from "./tasks/task.structure";
