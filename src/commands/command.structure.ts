@@ -49,7 +49,7 @@ export abstract class Command {
     public arguments: Array<CommandArgument>;
 
     /**
-     * The plugin instance that this event belongs to
+     * The plugin instance that this command belongs to
      * @type {Plugin}
      */
     public plugin: Plugin;
