@@ -1,4 +1,4 @@
-import { Interaction, MessageComponentInteraction } from "discord.js";
+import { Interaction, MessageComponentInteraction, MessageFlags } from "discord.js";
 import { container } from "../container";
 
 export class ComponentHandler {
@@ -30,12 +30,15 @@ export class ComponentHandler {
         }
 
         if (!pager) {
-            await interaction.reply({ content: "Pager not found", ephemeral: true });
+            await interaction.reply({ content: "Pager not found", flags: [MessageFlags.Ephemeral] });
             return;
         }
 
         if (!pager.render) {
-            await interaction.reply({ content: "Pager render method not implemented", ephemeral: true });
+            await interaction.reply({
+                content: "Pager render method not implemented",
+                flags: [MessageFlags.Ephemeral],
+            });
             return;
         }
 
@@ -75,14 +78,14 @@ export class ComponentHandler {
 
         try {
             if (!rendered) {
-                await interaction.reply({ content: "Failed to fetch pager data", ephemeral: true });
+                await interaction.reply({ content: "Failed to fetch pager data", flags: [MessageFlags.Ephemeral] });
                 return;
             }
             let nextRender = await pager.render(interaction, newPage + 1);
             rendered = pager.addActionRowToRender(rendered, newPage, !nextRender);
             await interaction.update(rendered);
         } catch (error) {
-            await interaction.reply({ content: "Failed to render pager", ephemeral: true });
+            await interaction.reply({ content: "Failed to render pager", flags: [MessageFlags.Ephemeral] });
         }
     }
 }
