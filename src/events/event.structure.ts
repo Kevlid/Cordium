@@ -1,4 +1,4 @@
-import type { Events } from "discord.js";
+import type { Events, PermissionResolvable } from "discord.js";
 import type { EventBuildOptions, EventOptions } from "./event.types";
 import type { Plugin } from "../plugins/plugin.structure";
 import { container } from "../container";
@@ -20,6 +20,14 @@ export abstract class Event {
     public once: boolean;
 
     /**
+     * The plugin instance that this command belongs to
+     * Bot permissions required to run the command
+     * @type {Array<PermissionResolvable>}
+     * @example ["BAN_MEMBERS", "KICK_MEMBERS"]
+     */
+    public botPermissions: Array<PermissionResolvable>;
+
+    /**
      * The plugin instance that this event belongs to
      * @type {Plugin}
      */
@@ -28,6 +36,7 @@ export abstract class Event {
     constructor(buildOptions: Event.BuildOptions, options: Event.Options) {
         this.name = options.name;
         this.once = options.once || false;
+        this.botPermissions = options.botPermissions || [];
         this.plugin = buildOptions.plugin;
     }
 

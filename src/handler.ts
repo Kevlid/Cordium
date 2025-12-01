@@ -37,29 +37,41 @@ export class Handler {
     public async onEventTriggered(eventName: string, ...args: any[]): Promise<void> {
         const events: Event[] = Array.from(container.eventStore).filter((e: Event) => e.name === eventName);
         for (const event of events) {
-            if (container.core.isPluginEnabled) {
-                let guildId: string | null = null;
-                const firstArg = args[0];
-                if (firstArg) {
-                    // direct guildId property (e.g. Interaction, Message)
-                    if (typeof firstArg === "object" && "guildId" in firstArg && firstArg.guildId) {
-                        guildId = String((firstArg as any).guildId);
-                    }
-                    // object with a guild property (e.g. has .guild or .guild.id)
-                    else if (typeof firstArg === "object" && "guild" in firstArg && (firstArg as any).guild) {
-                        const g = (firstArg as any).guild;
-                        if (typeof g === "string") guildId = g;
-                        else if (typeof g === "object" && "id" in g) guildId = String((g as any).id);
-                    }
-                    // the first arg itself is a Guild
-                    else if (firstArg instanceof Guild && (firstArg as Guild).id) {
-                        guildId = (firstArg as Guild).id;
-                    }
+            let guildId: string | null = null;
+            const firstArg = args[0];
+            if (firstArg) {
+                // direct guildId property (e.g. Interaction, Message)
+                if (typeof firstArg === "object" && "guildId" in firstArg && firstArg.guildId) {
+                    guildId = String((firstArg as any).guildId);
                 }
+                // object with a guild property (e.g. has .guild or .guild.id)
+                else if (typeof firstArg === "object" && "guild" in firstArg && (firstArg as any).guild) {
+                    const g = (firstArg as any).guild;
+                    if (typeof g === "string") guildId = g;
+                    else if (typeof g === "object" && "id" in g) guildId = String((g as any).id);
+                }
+                // the first arg itself is a Guild
+                else if (firstArg instanceof Guild && (firstArg as Guild).id) {
+                    guildId = (firstArg as Guild).id;
+                }
+            }
 
+            if (event.botPermissions && event.botPermissions.length > 0) {
+                let guild = await container.client.guilds.fetch(guildId!).catch(() => undefined);
+                let permissionCheck = await this.checkPermissions(event.botPermissions, args[0], {
+                    guild,
+                    channel: args[0]?.channel,
+                });
+                if (!permissionCheck.passed) {
+                    continue;
+                }
+            }
+
+            if (container.core.isPluginEnabled) {
                 let isEnabled = await container.core.isPluginEnabled(event.plugin.name, guildId);
                 if (!isEnabled) continue;
             }
+
             event.run(...args);
         }
     }

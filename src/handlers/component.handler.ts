@@ -1,5 +1,4 @@
 import { Interaction, MessageComponentInteraction } from "discord.js";
-import type { Pager } from "../pager/pager.structure";
 import { container } from "../container";
 
 export class ComponentHandler {
@@ -76,7 +75,6 @@ export class ComponentHandler {
 
         try {
             if (!rendered) {
-                console.log("Rendered:", rendered);
                 await interaction.reply({ content: "Failed to fetch pager data", ephemeral: true });
                 return;
             }
