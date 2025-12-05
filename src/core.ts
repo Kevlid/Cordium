@@ -88,7 +88,6 @@ export class Core {
         if (this.autoRegisterCommands) {
             const gid = container.store.get("applicationCommandGuildId") || null;
             this.handler.registerCommands(gid);
-            this.handler.unregisterCommands(gid);
         }
     }
 }
